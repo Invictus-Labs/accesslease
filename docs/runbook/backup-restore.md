@@ -9,9 +9,9 @@
 | `.env` / configuration | Provider settings, policy defaults | When it changes | Same rules as any secret file |
 | Evidence bundles (`export`) | Portable, versioned, redacted evidence you can read in a clean installation | As needed for audits | They contain no credentials; still treat as confidential records |
 
-The provider cluster is **not** part of the AccessLease backup: it is disposable and holds the live grants.
+Only a completed synthetic/disposable drill sandbox may be discarded. A real PostgreSQL provider also holds permanent `accesslease_control.terminal_fences` records: metadata backups alone do not preserve the terminal issuance barrier. Keep those provider control records through recovery and restore; never roll back, delete or prune terminal history. Delayed issuance or restored metadata may retry long after a role is absent. Before real use, the operator must approve a durable provider backup/restore and retention procedure ([provider-control.md](provider-control.md)); this guide supplies no crash-durability proof.
 
-Defaults to approve before real data: redacted evidence retention 90 days (configurable), primary deletion completing within 24 hours after the retention period ends, and **rotated backups expire within 30 days**. Your backup tooling must delete dumps on that schedule. The operator must approve these defaults before customer data is ingested.
+Defaults to approve before real data: redacted evidence retention 90 days (configurable), primary deletion completing within 24 hours after the retention period ends, and **rotated backups expire within 30 days**. Your backup tooling must delete dumps on that schedule. The operator must approve these defaults before customer data is ingested. These expiry defaults do not authorize deletion or rollback of terminal-fence history.
 
 ## Back up
 
@@ -38,7 +38,7 @@ docker compose exec accesslease rm /tmp/evidence.json
 
 Do this in a **new, isolated environment** first (test), and for a real recovery only after the checks below.
 
-**Warning: do not let a restored copy talk to the real provider until you have reconciled.** A restored database believes its own history. If it contains a lease the provider has already revoked, or lacks a lease the provider is still honouring, a worker with provider access will act on stale beliefs. Start with `--no-worker`, and with the provider variables pointing at nothing, until reconciliation is done.
+**Warning: do not let a restored copy talk to the real provider until you have reconciled.** A restored database believes its own history. If it contains a lease the provider has already revoked, or lacks a lease the provider is still honouring, a worker with provider access will act on stale beliefs. Start with `--no-worker`, and with the provider variables pointing at nothing, until metadata, provider roles/sessions and retained terminal fences have been reconciled. A restored provider snapshot that omits later terminal records is unsafe for new issuance; keep workers disconnected until the operator-reviewed recovery procedure preserves that history.
 
 ```bash
 # 1. a fresh database and the SAME secret key
@@ -63,15 +63,21 @@ A restored local database cannot undo remote effects. For every lease that was n
 1. **List what the database believes.** Open the restored report or the Leases page filtered to unresolved leases. Note leases in `ISSUING`, `ACTIVE`, `ISSUE_UNKNOWN`, `REVOKING` and `REVOCATION_UNCONFIRMED`.
 2. **List what the provider actually has.** For the PostgreSQL role provider, run against the provider cluster:
    ```sql
-   SELECT rolname, rolcanlogin, rolvaliduntil FROM pg_roles WHERE rolname LIKE 'al\_%' ORDER BY rolname;
+   SELECT rolname, rolcanlogin, rolvaliduntil, shobj_description(oid, 'pg_authid') AS lease_marker
+     FROM pg_roles WHERE rolname LIKE 'al\_%' ORDER BY rolname;
    SELECT usename, application_name, state, backend_start FROM pg_stat_activity WHERE usename LIKE 'al\_%';
    ```
+   In each immutable resource database, also inspect the retained provider control history:
+   ```sql
+   SELECT provider_ref, lease_id, resource_ref, terminal_at FROM accesslease_control.terminal_fences ORDER BY provider_ref;
+   ```
+   Missing, unsupported or unexpectedly owned control objects are a stop condition, not permission to recreate or clear history. Keep these inspection results confidential.
    Grant references are deterministic: `al_` plus the first 24 hex characters of the SHA-256 of the lease id, so every role can be matched to a lease (or shown to belong to none).
 3. **Compare.**
-   - A role exists for a lease the restored database shows as revoked or does not know at all (it was issued after the backup): the database is wrong about the provider. Revoke it at the provider by hand: terminate its sessions, `ALTER ROLE ... NOLOGIN`, `DROP OWNED BY ... ; DROP ROLE ...`.
-   - A lease shows `ACTIVE` but its role is already gone (revoked after the backup): leave it. When the worker starts it sweeps overdue leases first, revocation is idempotent on an already-removed grant, and verification will record the result honestly.
+   - A role exists for a lease the restored database shows as revoked or does not know at all (it was issued after the backup): the database is wrong about the provider. Use reviewed connector revocation for the exact lease/resource, or an explicitly operator-reviewed durable-fence reconciliation procedure that preserves the shared issuance lock, identity and committed terminal record. Manual `NOLOGIN`, session termination and role deletion alone do not establish the terminal barrier or verified revocation; a delayed issue could still commit. Keep issuance disabled until the barrier and independent checks are settled.
+   - A lease shows `ACTIVE` but its role is already gone (revoked after the backup): reconcile its retained terminal record as well. Role absence alone is not terminal safety. Reviewed connector revocation can commit the barrier and independently verify an already-removed grant; preserve uncertain outcomes until that completes.
    - A lease is `ISSUE_UNKNOWN`: the worker reconciles it by looking the grant up by its deterministic reference; never create the role by hand.
-4. **Only then start the worker**: `docker compose up -d accesslease`, or re-run `serve` without `--no-worker`. Watch `doctor` and the report until every lease you expected to be revoked shows **Revoked (verified)** with a verification time.
+4. **Only after provider and metadata reconciliation, including retained terminal history, start the worker**: `docker compose up -d accesslease`, or re-run `serve` without `--no-worker`. Watch `doctor` and the report until every lease you expected to be revoked shows **Revoked (verified)** with a verification time.
 
 Do not mark anything verified by editing the database. Verification is recorded only by the worker's independent checks.
 
