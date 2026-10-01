@@ -1,0 +1,48 @@
+{
+  "fixture_version": "1",
+  "description": "Synthetic AccessLease demo scenario. Every identifier is invented; no real person, host or credential appears here.",
+  "clock": "2026-09-28T12:00:00.000Z",
+  "workspace": { "name": "demo-workspace" },
+  "users": [
+    { "role": "admin", "email": "admin@example.invalid" },
+    { "role": "operator", "email": "operator@example.invalid" },
+    { "role": "viewer", "email": "viewer@example.invalid" }
+  ],
+  "leases": [
+    {
+      "key": "happy",
+      "task_ref": "TASK-DEMO-0001",
+      "subject_ref": "contractor-alpha@example.invalid",
+      "resource_ref": "pg:app",
+      "scopes": ["pg:app.records:select"],
+      "ttl_seconds": 3600,
+      "expect": { "after_expiry": "REVOKED_VERIFIED" }
+    },
+    {
+      "key": "early-close",
+      "task_ref": "TASK-DEMO-0002",
+      "subject_ref": "automation-agent-beta@example.invalid",
+      "resource_ref": "pg:app",
+      "scopes": ["pg:app.records:select", "pg:app.records:insert"],
+      "ttl_seconds": 1800,
+      "close_after_seconds": 600,
+      "expect": { "after_close": "REVOKED_VERIFIED" }
+    },
+    {
+      "key": "outage",
+      "task_ref": "TASK-DEMO-0003",
+      "subject_ref": "contractor-gamma@example.invalid",
+      "resource_ref": "pg:app",
+      "scopes": ["pg:app.records:select"],
+      "ttl_seconds": 900,
+      "fault": "revoke-outage",
+      "expect": { "after_expiry": "REVOCATION_UNCONFIRMED" }
+    }
+  ],
+  "rejected_requests": [
+    { "reason": "wildcard scope", "scopes": ["*"] },
+    { "reason": "all-privileges scope", "scopes": ["pg:app.records:all"] },
+    { "reason": "admin scope", "scopes": ["pg:app.records:superuser"] },
+    { "reason": "ttl over the hard maximum", "ttl_seconds": 28801 }
+  ]
+}

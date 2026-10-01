@@ -1,0 +1,13 @@
+# QA override: every container and network of the offline gate carries the accesslease-test=1 label so test cleanup tooling and humans
+# can tell them apart from anything else running on the machine.
+services:
+  db:
+    labels:
+      accesslease-test: "1"
+  smoke:
+    labels:
+      accesslease-test: "1"
+networks:
+  offline:
+    labels:
+      accesslease-test: "1"

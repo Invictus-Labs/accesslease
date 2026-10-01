@@ -1,0 +1,7 @@
+{
+  "schema_version": 999,
+  "kind": "accesslease.evidence-bundle",
+  "note": "Synthetic unsupported-major-version bundle. Import must refuse it and accept no partial state.",
+  "manifest": { "files": [] },
+  "documents": []
+}
