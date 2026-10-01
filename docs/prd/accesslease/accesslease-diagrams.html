@@ -1,0 +1,786 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AccessLease diagrams</title><style>/* ============================================================
+ * Mission Control — Knox's report theme
+ * ------------------------------------------------------------
+ * Dark sci-fi command center · CRT/HUD aesthetic · Inter + JetBrains Mono
+ * Domain colors per the Mission Control design system (MASTER.md)
+ *
+ * Sized for 3+ ft viewing distance from monitor:
+ *   - Body: 19px (vs default 16px)
+ *   - Most headings +15-20% over standard
+ *   - Mono labels +10-15% (small text reads worse at distance)
+ *
+ * Usage: copy this CSS into the report's <style> block (self-contained),
+ *        OR <link rel="stylesheet" href="../path/to/mission-control.css">
+ *        Either works. Self-contained is more portable.
+ * ============================================================ */
+
+:root {
+  --bg: #0a0a0f;
+  --bg2: #0d1117;
+  --surface: rgba(8, 15, 35, 0.88);
+  --surface2: rgba(15, 23, 50, 0.6);
+  --text: #e2e8f0;
+  --text2: #cbd5e1;
+  --text3: #94a3b8;
+  --text4: #64748b;
+  --border: rgba(0, 240, 255, 0.08);
+  --border-strong: rgba(0, 240, 255, 0.22);
+
+  --cyan: #00f0ff;
+  --cyan-glow: rgba(0, 240, 255, 0.35);
+  --gold: #fbbf24;
+  --gold-glow: rgba(251, 191, 36, 0.35);
+  --purple: #a855f7;
+  --purple-glow: rgba(168, 85, 247, 0.35);
+  --red: #ff6b6b;
+  --red-glow: rgba(255, 107, 107, 0.35);
+  --blue: #22d3ee;
+  --blue-glow: rgba(34, 211, 238, 0.35);
+  --green: #10b981;
+  --green-glow: rgba(16, 185, 129, 0.35);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 19px;
+  line-height: 1.6;
+  font-weight: 400;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.bg-field {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(900px 600px at 90% -10%, rgba(0, 240, 255, 0.06), transparent 65%),
+    radial-gradient(700px 500px at -5% 30%, rgba(168, 85, 247, 0.05), transparent 65%),
+    radial-gradient(600px 400px at 50% 110%, rgba(251, 191, 36, 0.04), transparent 70%);
+}
+
+.wrap {
+  position: relative; z-index: 10;
+  max-width: 1180px; margin: 0 auto;
+  padding: 56px 32px 112px;
+}
+
+/* ============ HEADER ============ */
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 32px; padding: 24px 0 36px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 48px;
+  flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 16px; }
+.brand-mark {
+  width: 44px; height: 44px;
+  border: 1.5px solid var(--cyan);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; font-size: 16px;
+  box-shadow: 0 0 16px var(--cyan-glow), inset 0 0 8px rgba(0, 240, 255, 0.15);
+  position: relative;
+}
+.brand-mark::before, .brand-mark::after {
+  content: ''; position: absolute; width: 7px; height: 7px;
+  border-color: var(--cyan);
+}
+.brand-mark::before { top: -3px; left: -3px; border-top: 1.5px solid; border-left: 1.5px solid; }
+.brand-mark::after  { bottom: -3px; right: -3px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
+.brand-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text3); line-height: 1.4;
+}
+.brand-text strong {
+  display: block; color: var(--text);
+  font-weight: 700; letter-spacing: 0.14em;
+  margin-bottom: 3px;
+}
+.telemetry {
+  display: flex; gap: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text3); flex-wrap: wrap;
+}
+.telemetry span strong {
+  display: block; color: var(--cyan);
+  font-size: 15px; font-weight: 600;
+  margin-top: 3px; letter-spacing: 0.08em;
+}
+.pulse-dot {
+  display: inline-block; width: 9px; height: 9px;
+  background: var(--green); border-radius: 50%;
+  box-shadow: 0 0 10px var(--green-glow);
+  margin-right: 8px; vertical-align: middle;
+}
+
+/* ============ HERO ============ */
+.hero { margin-bottom: 64px; position: relative; }
+.hud-corners {
+  position: relative; padding: 36px 40px;
+  border: 1px solid var(--border);
+  background: linear-gradient(145deg, rgba(13,17,23,0.7), rgba(15,20,30,0.5), rgba(13,17,23,0.7));
+  backdrop-filter: blur(10px);
+}
+.hud-corners::before, .hud-corners::after,
+.hud-corners > .corner-tr, .hud-corners > .corner-bl {
+  content: ''; position: absolute; width: 18px; height: 18px;
+  border-color: var(--cyan);
+}
+.hud-corners::before    { top: -1px; left: -1px; border-top: 2px solid; border-left: 2px solid; }
+.hud-corners::after     { bottom: -1px; right: -1px; border-bottom: 2px solid; border-right: 2px solid; }
+.hud-corners > .corner-tr { top: -1px; right: -1px; border-top: 2px solid; border-right: 2px solid; }
+.hud-corners > .corner-bl { bottom: -1px; left: -1px; border-bottom: 2px solid; border-left: 2px solid; }
+
+.eyebrow {
+  display: flex; align-items: center; gap: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--cyan); margin-bottom: 22px;
+}
+.eyebrow::before {
+  content: ''; width: 36px; height: 1px;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan-glow);
+}
+h1 {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(38px, 5.4vw, 60px);
+  line-height: 1.05; letter-spacing: -0.02em;
+  font-weight: 800;
+  margin: 0 0 24px; color: var(--text);
+}
+h1 .accent { color: var(--cyan); text-shadow: 0 0 24px var(--cyan-glow); }
+h1 .green-accent { color: var(--green); text-shadow: 0 0 24px var(--green-glow); }
+.lede {
+  font-size: 20px; line-height: 1.65;
+  color: var(--text2);
+  max-width: 880px; margin: 0;
+}
+.mission-tags {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-top: 28px;
+}
+.tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 6px 13px;
+  border: 1px solid var(--border-strong);
+  color: var(--text2);
+  background: var(--surface);
+  border-radius: 3px;
+}
+.tag.cyan   { border-color: rgba(0, 240, 255, 0.4); color: var(--cyan); }
+.tag.gold   { border-color: rgba(251, 191, 36, 0.4); color: var(--gold); }
+.tag.purple { border-color: rgba(168, 85, 247, 0.4); color: var(--purple); }
+.tag.blue   { border-color: rgba(34, 211, 238, 0.4); color: var(--blue); }
+.tag.red    { border-color: rgba(255, 107, 107, 0.4); color: var(--red); }
+.tag.green  { border-color: rgba(16, 185, 129, 0.4); color: var(--green); }
+
+/* ============ SECTIONS ============ */
+section { margin-top: 72px; }
+.section-head {
+  display: flex; align-items: baseline; gap: 18px;
+  margin-bottom: 28px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.section-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 700; color: var(--cyan);
+  letter-spacing: 0.15em;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong); border-radius: 3px;
+  background: rgba(0, 240, 255, 0.04);
+}
+h2 {
+  font-family: 'Inter', sans-serif;
+  font-size: 26px; font-weight: 700; letter-spacing: -0.005em;
+  color: var(--text); margin: 0; flex: 1;
+}
+.section-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text4);
+}
+
+/* ============ STAT STRIP ============ */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+.stat-card {
+  padding: 22px 24px;
+  background: linear-gradient(145deg, rgba(13,17,23,0.85), rgba(15,20,30,0.65));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+}
+.stat-card .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 8px;
+}
+.stat-card .value {
+  font-family: 'Inter', sans-serif;
+  font-size: 36px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em; line-height: 1.1;
+  color: var(--cyan);
+  text-shadow: 0 0 18px var(--cyan-glow);
+}
+.stat-card .value.gold   { color: var(--gold); text-shadow: 0 0 18px var(--gold-glow); }
+.stat-card .value.purple { color: var(--purple); text-shadow: 0 0 18px var(--purple-glow); }
+.stat-card .value.green  { color: var(--green); text-shadow: 0 0 18px var(--green-glow); }
+.stat-card .value.blue   { color: var(--blue); text-shadow: 0 0 18px var(--blue-glow); }
+.stat-card .value.red    { color: var(--red); text-shadow: 0 0 18px var(--red-glow); }
+.stat-card .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; letter-spacing: 0.08em;
+  color: var(--text3); margin-top: 8px;
+}
+
+/* ============ MASTER CARD ============ */
+.master-card {
+  padding: 32px 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  position: relative;
+}
+.master-card::before {
+  content: ''; position: absolute; inset: 0;
+  border-radius: 10px; padding: 1px;
+  background: linear-gradient(135deg, transparent, var(--cyan) 50%, transparent);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0.5; pointer-events: none;
+}
+.master-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+  margin-top: 8px;
+}
+@media (max-width: 740px) { .master-grid { grid-template-columns: 1fr; } }
+.master-grid h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--cyan); margin: 0 0 12px;
+}
+.master-grid p {
+  margin: 0 0 14px;
+  color: var(--text2); font-size: 17px; line-height: 1.6;
+}
+.master-grid ul {
+  margin: 0; padding-left: 20px;
+  color: var(--text2); font-size: 17px; line-height: 1.6;
+}
+.master-grid li { margin-bottom: 8px; }
+
+/* ============ RECON BANNER ============ */
+.recon-banner {
+  margin-bottom: 24px;
+  padding: 22px 26px;
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.06), rgba(15,20,30,0.5), rgba(168, 85, 247, 0.05));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+}
+.recon-banner .lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 10px;
+}
+.recon-banner p { margin: 0; color: var(--text2); font-size: 17px; line-height: 1.6; }
+.recon-banner p strong { color: var(--text); }
+.recon-banner p a { color: var(--cyan); border-bottom: 1px dotted currentColor; text-decoration: none; }
+
+/* ============ INDEX TABLE ============ */
+.idx-table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+.idx-table th, .idx-table td {
+  padding: 14px 18px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  vertical-align: top;
+}
+.idx-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--cyan);
+  background: rgba(0, 240, 255, 0.04);
+}
+.idx-table td.num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; color: var(--cyan);
+  width: 56px; letter-spacing: 0.06em; font-size: 15px;
+}
+.idx-table td.file {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; color: var(--text2);
+}
+.idx-table td.file a {
+  color: inherit; text-decoration: none;
+  border-bottom: 1px dotted var(--text4);
+}
+.idx-table td.file a:hover { color: var(--cyan); border-color: var(--cyan); }
+.idx-table td.evidence {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; color: var(--text3);
+}
+.idx-table tr:last-child td { border-bottom: none; }
+.idx-table tr:hover td { background: rgba(0, 240, 255, 0.03); }
+
+/* ============ PILLS ============ */
+.phase-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  padding: 4px 9px; border-radius: 3px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  border: 1px solid; display: inline-block;
+}
+.phase-pill.hygiene { color: var(--cyan);   border-color: rgba(0, 240, 255, 0.4);  background: rgba(0, 240, 255, 0.05); }
+.phase-pill.growth  { color: var(--gold);   border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.05); }
+.phase-pill.rd      { color: var(--blue);   border-color: rgba(34, 211, 238, 0.4); background: rgba(34, 211, 238, 0.05); }
+.phase-pill.all     { color: var(--purple); border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.05); }
+
+.status-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  padding: 4px 9px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text3);
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 3px;
+  white-space: nowrap;
+  display: inline-block;
+}
+.status-pill.done       { color: var(--green); background: rgba(16, 185, 129, 0.08);  border-color: rgba(16, 185, 129, 0.45); }
+.status-pill.superseded { color: var(--green); background: rgba(16, 185, 129, 0.06);  border-color: rgba(16, 185, 129, 0.35); }
+.status-pill.partial    { color: var(--gold);  background: rgba(251, 191, 36, 0.08);  border-color: rgba(251, 191, 36, 0.45); }
+.status-pill.draft      { color: var(--text3); background: rgba(148, 163, 184, 0.06); border-color: rgba(148, 163, 184, 0.25); }
+.status-pill.active     { color: var(--cyan);  background: rgba(0, 240, 255, 0.06);   border-color: rgba(0, 240, 255, 0.4);  }
+
+/* ============ PRD / BRIEF CARDS ============ */
+.prds { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.prd {
+  position: relative;
+  padding: 32px 34px;
+  background: linear-gradient(145deg, rgba(13,17,23,0.88), rgba(15,20,30,0.6), rgba(13,17,23,0.88));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.prd::before {
+  content: ''; position: absolute; inset: 0;
+  border-radius: 10px; padding: 1px;
+  background: linear-gradient(135deg, transparent, var(--accent, var(--cyan)) 50%, transparent);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0.5; pointer-events: none;
+}
+.prd:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px var(--accent-glow, var(--cyan-glow));
+}
+.prd.cyan   { --accent: var(--cyan);   --accent-glow: rgba(0, 240, 255, 0.18); }
+.prd.gold   { --accent: var(--gold);   --accent-glow: rgba(251, 191, 36, 0.18); }
+.prd.purple { --accent: var(--purple); --accent-glow: rgba(168, 85, 247, 0.18); }
+.prd.blue   { --accent: var(--blue);   --accent-glow: rgba(34, 211, 238, 0.18); }
+.prd.green  { --accent: var(--green);  --accent-glow: rgba(16, 185, 129, 0.18); }
+.prd.closed { opacity: 0.88; }
+.prd.closed:hover { transform: translateY(-1px); }
+
+.prd-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; gap: 18px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.prd-id-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.prd-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; font-weight: 700;
+  color: var(--accent, var(--cyan));
+  letter-spacing: 0.16em;
+  padding: 5px 10px;
+  border: 1px solid;
+  border-color: var(--accent, var(--cyan));
+  border-radius: 3px;
+  background: rgba(255,255,255,0.02);
+  text-transform: uppercase;
+}
+.prd-deps {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text4); letter-spacing: 0.08em;
+}
+.prd-deps strong { color: var(--text3); }
+.prd-deps code, .prd-grid code, .verdict-block code, .master-grid code, .handoff p code {
+  font-family: 'JetBrains Mono', monospace; font-size: 13px;
+  background: rgba(0, 240, 255, 0.06);
+  padding: 2px 6px;
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 3px;
+  color: var(--cyan);
+}
+.prd h3 {
+  margin: 6px 0 8px;
+  font-size: 24px; font-weight: 700; line-height: 1.2;
+  color: var(--text); letter-spacing: -0.01em;
+}
+.prd-goal {
+  font-size: 17px; line-height: 1.55;
+  color: var(--text2);
+  margin: 0 0 20px; font-style: italic;
+  padding-left: 16px;
+  border-left: 2px solid var(--accent, var(--cyan));
+}
+
+/* ============ VERDICT BLOCK ============ */
+.verdict-block {
+  margin-top: 20px; padding: 20px 22px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--accent, var(--cyan));
+  border-left-width: 3px;
+  border-radius: 6px;
+}
+.verdict-block.green { border-color: rgba(16, 185, 129, 0.5);  background: rgba(16, 185, 129, 0.04); }
+.verdict-block.gold  { border-color: rgba(251, 191, 36, 0.5);  background: rgba(251, 191, 36, 0.04); }
+.verdict-block.text3 { border-color: rgba(148, 163, 184, 0.35); background: rgba(148, 163, 184, 0.03); }
+.verdict-block.purple { border-color: rgba(168, 85, 247, 0.5); background: rgba(168, 85, 247, 0.04); }
+.verdict-block .v-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  margin-bottom: 10px;
+  display: block;
+}
+.verdict-block.green  .v-lbl { color: var(--green); }
+.verdict-block.gold   .v-lbl { color: var(--gold); }
+.verdict-block.text3  .v-lbl { color: var(--text3); }
+.verdict-block.purple .v-lbl { color: var(--purple); }
+.verdict-block p {
+  margin: 0 0 10px;
+  color: var(--text2); font-size: 16px; line-height: 1.6;
+}
+.verdict-block p:last-child { margin-bottom: 0; }
+.verdict-block ul {
+  margin: 0; padding-left: 18px;
+  color: var(--text2); font-size: 16px; line-height: 1.6;
+}
+.verdict-block li { margin-bottom: 7px; }
+
+/* ============ OPEN QUESTIONS ============ */
+.q-list { display: grid; gap: 14px; }
+.q {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 22px; padding: 22px 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  align-items: baseline;
+}
+.q.resolved {
+  opacity: 0.65;
+  background: rgba(16, 185, 129, 0.03);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+.q-pri {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 3px;
+  border: 1px solid; text-align: center;
+}
+.q-pri.high     { color: var(--red);    border-color: rgba(255, 107, 107, 0.5); background: rgba(255, 107, 107, 0.06); }
+.q-pri.med      { color: var(--gold);   border-color: rgba(251, 191, 36, 0.5);  background: rgba(251, 191, 36, 0.06); }
+.q-pri.low      { color: var(--cyan);   border-color: rgba(0, 240, 255, 0.4);   background: rgba(0, 240, 255, 0.04); }
+.q-pri.strat    { color: var(--purple); border-color: rgba(168, 85, 247, 0.5);  background: rgba(168, 85, 247, 0.06); }
+.q-pri.resolved { color: var(--green);  border-color: rgba(16, 185, 129, 0.5);  background: rgba(16, 185, 129, 0.06); }
+.q-body .q-text {
+  color: var(--text); font-weight: 500;
+  font-size: 17px; line-height: 1.55;
+  margin-bottom: 8px;
+}
+.q-body .q-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--text3); letter-spacing: 0.08em;
+}
+.q-body .q-meta strong { color: var(--cyan); }
+.q.resolved .q-body .q-meta strong { color: var(--green); }
+
+/* ============ HANDOFF ============ */
+.handoff {
+  padding: 32px 34px;
+  background: linear-gradient(145deg, rgba(0, 240, 255, 0.05), rgba(15,20,30,0.7), rgba(0, 240, 255, 0.05));
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+.handoff h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--cyan); margin: 0 0 14px;
+}
+.handoff p {
+  margin: 0 0 18px;
+  color: var(--text2); font-size: 17px; line-height: 1.6;
+}
+pre.cmd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; line-height: 1.7;
+  color: var(--cyan);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  border-radius: 6px;
+  padding: 18px 20px;
+  overflow-x: auto;
+  margin: 0 0 20px;
+}
+pre.cmd .comment { color: var(--text4); }
+pre.cmd .accent  { color: var(--gold); }
+pre.cmd .green   { color: var(--green); }
+
+/* ============ FOOTER ============ */
+footer {
+  margin-top: 88px; padding-top: 28px;
+  border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text4);
+  display: flex; justify-content: space-between;
+  flex-wrap: wrap; gap: 18px;
+}
+footer a {
+  color: var(--text3); text-decoration: none;
+  border-bottom: 1px dotted var(--text4);
+}
+footer a:hover { color: var(--cyan); border-color: var(--cyan); }
+
+@media (max-width: 720px) {
+  .wrap { padding: 36px 20px 72px; }
+  .q { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Mission Control — v2 Diagram Frame (portable)
+   ────────────────────────────────────────────────────────────────────────
+   Ports the Operator's Academy "Diagram System v2" grammar
+   (academy/design-system/DIAGRAM-GRAMMAR.md) into a self-contained,
+   React-free CSS block for the HTML report companions emitted by the
+   innovation + prd-writer skills.
+
+   USAGE: inline this file in a <style> block AFTER mission-control.css,
+   then wrap every Mermaid graph in the .dg DiagramFrame markup documented
+   in reports-theme/DIAGRAMS.md. Mermaid renders the topology; this CSS
+   supplies the academy chrome (grid bg, mono title, ⊕ zoom chip, the
+   InsightStrip takeaway bar).
+
+   DARK ONLY — Mission Control HTML companions are dark-mode only (Knox
+   default). The academy's bi-modal light tokens are intentionally omitted.
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* diagram surfaces (--dg-*) — academy dark terminal family */
+  --dg-bg: #0d1117;
+  --dg-surface: #161b22;
+  --dg-line: #1e2a3a;
+  --dg-text: #e2e8f0;
+  --dg-muted: #94a3b8;
+  --dg-dim: #7e8ea0;            /* NOT #64748b — fails 4.5:1 on terminal cards */
+  --dg-grid: rgba(0, 240, 255, .025);
+  --dg-frame-border: rgba(0, 240, 255, .22);
+  --dg-frame-shadow: 0 10px 30px rgba(0, 0, 0, .45), 0 0 24px rgba(0, 240, 255, .05);
+
+  /* diagram accents (--c-*) — neon set, the v2 wire/node vocabulary */
+  --c-cyan: #00f0ff;           /* hot   — primary path / main subsystem */
+  --c-blue: #22d3ee;           /* data  — data read / load */
+  --c-gold: #fbbf24;           /* cron  — scheduled / standing */
+  --c-amber: #f59e0b;
+  --c-purple: #a855f7;         /* loop  — feedback / learning loop */
+  --c-violet: #a78bfa;
+  --c-green: #10b981;          /* ok / output / shipped */
+  --c-red: #ff6b6b;            /* fault / blocked / risk */
+  --c-slate: #94a3b8;          /* ext   — external / out-of-boundary */
+}
+
+/* ── DiagramFrame: the outer container (= academy DiagramFrame primitive) ── */
+.dg {
+  position: relative;
+  margin: 26px 0;
+  border-radius: 12px;
+  padding: 26px 24px 24px;
+  background:
+    linear-gradient(var(--dg-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dg-grid) 1px, transparent 1px),
+    var(--dg-bg);
+  background-size: 28px 28px, 28px 28px, auto;
+  border: 1px solid var(--dg-frame-border);
+  box-shadow: var(--dg-frame-shadow);
+}
+
+.dg-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.dg-title {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--c-cyan);
+}
+.dg-zoom {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  color: var(--dg-dim);
+  border: 1px solid var(--dg-line);
+  border-radius: 4px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  cursor: zoom-in;
+}
+.dg-sub {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  color: var(--dg-dim);
+  letter-spacing: .03em;
+  margin-bottom: 20px;
+}
+
+/* the Mermaid graph itself — centred, never overflowing the frame */
+.dg .mermaid {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0;
+  min-height: 40px;
+}
+.dg .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── InsightStrip: the mandatory one-line takeaway bar ──────────────────── */
+/* set the accent per-diagram via style="--a:var(--c-cyan)" on the element */
+.dg .insight {
+  margin-top: 22px;
+  padding: 13px 18px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  text-align: center;
+  border: 1px solid color-mix(in srgb, var(--a, var(--c-cyan)) 28%, transparent);
+  background: color-mix(in srgb, var(--a, var(--c-cyan)) 6%, transparent);
+}
+.dg .insight b { color: var(--a, var(--c-cyan)); font-weight: 700; margin-right: 6px; }
+.dg .insight span { color: var(--dg-muted); }
+
+/* ── Legend chip row (optional) — explains wire/node vocabulary in-frame ── */
+.dg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 16px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--dg-dim);
+}
+.dg-legend i { font-style: normal; color: var(--dg-muted); }
+.dg-legend .k {
+  display: inline-block;
+  width: 22px;
+  border-top: 2px solid var(--c-cyan);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.dg-legend .k.cron  { border-top: 2px dashed var(--c-gold); }
+.dg-legend .k.data  { border-top: 2px dashed var(--c-blue); }
+.dg-legend .k.loop  { border-top: 2px solid var(--c-purple); }
+.dg-legend .k.ext   { border-top: 2px dashed var(--c-slate); }
+
+@media (max-width: 480px) {
+  .dg { padding: 18px 14px 16px; }
+  .dg-zoom { display: none; }
+}
+
+body{max-width:1220px;margin:auto;padding:36px;background:#080c12;color:#e2e8f0;font:16px/1.65 system-ui}h1,h2,h3{color:#00f0ff}h1{font-size:42px}h2{margin-top:48px}a{color:#00f0ff}table{width:100%;border-collapse:collapse;display:block;overflow:auto}td,th{border:1px solid #263747;padding:12px;text-align:left;vertical-align:top}pre{white-space:pre-wrap;overflow:auto;background:#111923;padding:18px}code{font-size:13px}.hero,.card{border:1px solid #294353;padding:24px;margin:24px 0}.dg svg{max-width:100%;height:auto}.badge{color:#fbbf24}.operator label{display:block;padding:12px;border-bottom:1px solid #263747}.source{display:none}nav a{margin-right:20px}</style></head><body><h1>AccessLease — proposed topology</h1><div class="dg" data-diagram><div class="dg-head"><span class="dg-title">Architecture</span><span class="dg-zoom">⊕ zoom</span></div><div class="dg-sub">The core works independently; adapters are optional.</div><svg id="my-svg" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 1566px; background-color: rgb(13, 17, 23);" viewBox="0 0 1566 164" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#my-svg{font-family:JetBrains Mono,monospace;font-size:16px;fill:#e2e8f0;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#my-svg .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#my-svg .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#my-svg .error-icon{fill:hsl(35, 21.4285714286%, 15.9803921569%);}#my-svg .error-text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);stroke:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .edge-thickness-normal{stroke-width:1px;}#my-svg .edge-thickness-thick{stroke-width:3.5px;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}#my-svg .edge-thickness-invisible{stroke-width:0;fill:none;}#my-svg .edge-pattern-dashed{stroke-dasharray:3;}#my-svg .edge-pattern-dotted{stroke-dasharray:2;}#my-svg .marker{fill:#94a3b8;stroke:#94a3b8;}#my-svg .marker.cross{stroke:#94a3b8;}#my-svg svg{font-family:JetBrains Mono,monospace;font-size:16px;}#my-svg p{margin:0;}#my-svg .label{font-family:JetBrains Mono,monospace;color:#e2e8f0;}#my-svg .cluster-label text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster-label span{color:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster-label span p{background-color:transparent;}#my-svg .label text,#my-svg span{fill:#e2e8f0;color:#e2e8f0;}#my-svg .node rect,#my-svg .node circle,#my-svg .node ellipse,#my-svg .node polygon,#my-svg .node path{fill:#161b22;stroke:#00f0ff;stroke-width:1px;}#my-svg .rough-node .label text,#my-svg .node .label text,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-anchor:middle;}#my-svg .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#my-svg .rough-node .label,#my-svg .node .label,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-align:center;}#my-svg .node.clickable{cursor:pointer;}#my-svg .root .anchor path{fill:#94a3b8!important;stroke-width:0;stroke:#94a3b8;}#my-svg .arrowheadPath{fill:#f2eee8;}#my-svg .edgePath .path{stroke:#94a3b8;stroke-width:1px;}#my-svg .flowchart-link{stroke:#94a3b8;fill:none;}#my-svg .edgeLabel{background-color:hsl(95, 21.4285714286%, 10.9803921569%);text-align:center;}#my-svg .edgeLabel p{background-color:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .edgeLabel rect{opacity:0.5;background-color:hsl(95, 21.4285714286%, 10.9803921569%);fill:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .labelBkg{background-color:rgba(27.0000000001, 34.0000000001, 22.0000000001, 0.5);}#my-svg .cluster rect{fill:hsl(35, 21.4285714286%, 15.9803921569%);stroke:hsl(35, 0%, 5.9803921569%);stroke-width:1px;}#my-svg .cluster text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster span{color:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:JetBrains Mono,monospace;font-size:12px;background:hsl(35, 21.4285714286%, 15.9803921569%);border:1px solid hsl(35, 0%, 5.9803921569%);border-radius:2px;pointer-events:none;z-index:100;}#my-svg .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#e2e8f0;}#my-svg rect.text{fill:none;stroke-width:0;}#my-svg .icon-shape,#my-svg .image-shape{background-color:hsl(95, 21.4285714286%, 10.9803921569%);text-align:center;}#my-svg .icon-shape p,#my-svg .image-shape p{background-color:hsl(95, 21.4285714286%, 10.9803921569%);padding:2px;}#my-svg .icon-shape .label rect,#my-svg .image-shape .label rect{opacity:0.5;background-color:hsl(95, 21.4285714286%, 10.9803921569%);fill:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#my-svg .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#my-svg .node .neo-node{stroke:#00f0ff;}#my-svg [data-look="neo"].node rect,#my-svg [data-look="neo"].cluster rect,#my-svg [data-look="neo"].node polygon{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].swimlane.cluster rect{filter:none;}#my-svg [data-look="neo"].node path{stroke:url(#my-svg-gradient);stroke-width:1px;}#my-svg [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node .neo-line path{stroke:#00f0ff;filter:none;}#my-svg [data-look="neo"].node circle{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node circle .state-start{fill:#000000;}#my-svg [data-look="neo"].icon-shape .icon{fill:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].icon-shape .icon-neo path{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#my-svg .hot&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(0, 240, 255)!important;stroke-width:2px!important;color:rgb(226, 232, 240)!important;}#my-svg .hot span{fill:rgb(13, 17, 23)!important;stroke:rgb(0, 240, 255)!important;stroke-width:2px!important;color:rgb(226, 232, 240)!important;}#my-svg .hot tspan{fill:rgb(226, 232, 240)!important;}#my-svg .green&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(16, 185, 129)!important;stroke-width:1.5px!important;color:rgb(226, 232, 240)!important;}#my-svg .green span{fill:rgb(13, 17, 23)!important;stroke:rgb(16, 185, 129)!important;stroke-width:1.5px!important;color:rgb(226, 232, 240)!important;}#my-svg .green tspan{fill:rgb(226, 232, 240)!important;}#my-svg .ext&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(100, 116, 139)!important;stroke-dasharray:4,3!important;color:rgb(148, 163, 184)!important;}#my-svg .ext span{fill:rgb(13, 17, 23)!important;stroke:rgb(100, 116, 139)!important;stroke-dasharray:4,3!important;color:rgb(148, 163, 184)!important;}#my-svg .ext tspan{fill:rgb(148, 163, 184)!important;}</style><g><marker id="my-svg_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="my-svg_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"><g class="cluster" id="my-svg-Local" data-look="classic"><rect style="" x="8" y="8" width="1240" height="148"/><g class="cluster-label" transform="translate(531.671875, 8)"><foreignObject width="192.65625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Self-hosted boundary</p></span></div></foreignObject></g></g></g><g class="edgePaths"><path d="M293,82L297.167,82C301.333,82,309.667,82,317.333,82C325,82,332,82,335.5,82L339,82" id="my-svg-L_A_B_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6MjkzLCJ5Ijo4Mn0seyJ4IjozMTgsInkiOjgyfSx7IngiOjM0MywieSI6ODJ9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M603,82L607.167,82C611.333,82,619.667,82,627.333,82C635,82,642,82,645.5,82L649,82" id="my-svg-L_B_C_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_B_C_0" data-points="W3sieCI6NjAzLCJ5Ijo4Mn0seyJ4Ijo2MjgsInkiOjgyfSx7IngiOjY1MywieSI6ODJ9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M913,82L917.167,82C921.333,82,929.667,82,937.333,82C945,82,952,82,955.5,82L959,82" id="my-svg-L_C_D_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_C_D_0" data-points="W3sieCI6OTEzLCJ5Ijo4Mn0seyJ4Ijo5MzgsInkiOjgyfSx7IngiOjk2MywieSI6ODJ9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M1223,82L1227.167,82C1231.333,82,1239.667,82,1248,82C1256.333,82,1264.667,82,1272.333,82C1280,82,1287,82,1290.5,82L1294,82" id="my-svg-L_D_E_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#64748b;stroke-width:1.5px;fill:none;;;stroke:#64748b;stroke-width:1.5px;fill:none" data-edge="true" data-et="edge" data-id="L_D_E_0" data-points="W3sieCI6MTIyMywieSI6ODJ9LHsieCI6MTI0OCwieSI6ODJ9LHsieCI6MTI3MywieSI6ODJ9LHsieCI6MTI5OCwieSI6ODJ9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__64748b)"/></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_A_B_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_B_C_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_C_D_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_D_E_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default hot" id="my-svg-flowchart-A-0" data-look="classic" transform="translate(163, 82)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Task and scoped access request</p></span></div></foreignObject></g></g><g class="node default green" id="my-svg-flowchart-B-1" data-look="classic" transform="translate(473, 82)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#10b981 !important;stroke-width:1.5px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Lease policy and revocation worker</p></span></div></foreignObject></g></g><g class="node default hot" id="my-svg-flowchart-C-2" data-look="classic" transform="translate(783, 82)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Versioned evidence store</p></span></div></foreignObject></g></g><g class="node default green" id="my-svg-flowchart-D-3" data-look="classic" transform="translate(1093, 82)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#10b981 !important;stroke-width:1.5px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Verified revocation receipt</p></span></div></foreignObject></g></g><g class="node default ext" id="my-svg-flowchart-E-4" data-look="classic" transform="translate(1428, 82)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#64748b !important;stroke-dasharray:4 3 !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#94a3b8 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(148, 163, 184) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#94a3b8 !important" class="nodeLabel"><p>Optional ecosystem adapter</p></span></div></foreignObject></g></g></g></g><marker id="my-svg_flowchart-v2-pointEnd__00f0ff" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;" stroke="#00f0ff" fill="#00f0ff"/></marker><marker id="my-svg_flowchart-v2-pointEnd__64748b" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;" stroke="#64748b" fill="#64748b"/></marker></g><defs><filter id="my-svg-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="my-svg-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="my-svg-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00f0ff" stop-opacity="1"/><stop offset="100%" stop-color="hsl(95, 0%, 0.9803921569%)" stop-opacity="1"/></linearGradient></svg><pre class="source mermaid">%%{init: {&#x27;theme&#x27;:&#x27;base&#x27;,&#x27;themeVariables&#x27;:{&#x27;background&#x27;:&#x27;#0d1117&#x27;,&#x27;primaryColor&#x27;:&#x27;#161b22&#x27;,&#x27;primaryBorderColor&#x27;:&#x27;#00f0ff&#x27;,&#x27;primaryTextColor&#x27;:&#x27;#e2e8f0&#x27;,&#x27;lineColor&#x27;:&#x27;#94a3b8&#x27;,&#x27;fontFamily&#x27;:&#x27;JetBrains Mono, monospace&#x27;}}}%%
+graph LR
+ subgraph Local[&quot;Self-hosted boundary&quot;]
+ A[&quot;Task and scoped access request&quot;]:::hot
+ B[&quot;Lease policy and revocation worker&quot;]:::green
+ C[&quot;Versioned evidence store&quot;]:::hot
+ D[&quot;Verified revocation receipt&quot;]:::green
+ end
+ E[&quot;Optional ecosystem adapter&quot;]:::ext
+ A ==&gt; B
+ B ==&gt; C
+ C ==&gt; D
+ D -.-&gt; E
+
+classDef hot fill:#0d1117,stroke:#00f0ff,stroke-width:2px,color:#e2e8f0;
+classDef green fill:#0d1117,stroke:#10b981,stroke-width:1.5px,color:#e2e8f0;
+classDef ext fill:#0d1117,stroke:#64748b,stroke-dasharray:4 3,color:#94a3b8;
+linkStyle 0,1,2 stroke:#00f0ff,stroke-width:2px;
+linkStyle 3 stroke:#64748b,stroke-width:1.5px;
+</pre><div class="insight"><b>THE POINT:</b> The core works independently; adapters are optional.</div></div><div class="dg" data-diagram><div class="dg-head"><span class="dg-title">Workflow</span><span class="dg-zoom">⊕ zoom</span></div><div class="dg-sub">Persist evidence at each boundary; unresolved outcomes remain visible.</div><svg id="my-svg" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 276px; background-color: rgb(13, 17, 23);" viewBox="0 0 276 734" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#my-svg{font-family:JetBrains Mono,monospace;font-size:16px;fill:#e2e8f0;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#my-svg .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#my-svg .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#my-svg .error-icon{fill:hsl(35, 21.4285714286%, 15.9803921569%);}#my-svg .error-text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);stroke:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .edge-thickness-normal{stroke-width:1px;}#my-svg .edge-thickness-thick{stroke-width:3.5px;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}#my-svg .edge-thickness-invisible{stroke-width:0;fill:none;}#my-svg .edge-pattern-dashed{stroke-dasharray:3;}#my-svg .edge-pattern-dotted{stroke-dasharray:2;}#my-svg .marker{fill:#94a3b8;stroke:#94a3b8;}#my-svg .marker.cross{stroke:#94a3b8;}#my-svg svg{font-family:JetBrains Mono,monospace;font-size:16px;}#my-svg p{margin:0;}#my-svg .label{font-family:JetBrains Mono,monospace;color:#e2e8f0;}#my-svg .cluster-label text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster-label span{color:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster-label span p{background-color:transparent;}#my-svg .label text,#my-svg span{fill:#e2e8f0;color:#e2e8f0;}#my-svg .node rect,#my-svg .node circle,#my-svg .node ellipse,#my-svg .node polygon,#my-svg .node path{fill:#161b22;stroke:#00f0ff;stroke-width:1px;}#my-svg .rough-node .label text,#my-svg .node .label text,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-anchor:middle;}#my-svg .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#my-svg .rough-node .label,#my-svg .node .label,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-align:center;}#my-svg .node.clickable{cursor:pointer;}#my-svg .root .anchor path{fill:#94a3b8!important;stroke-width:0;stroke:#94a3b8;}#my-svg .arrowheadPath{fill:#f2eee8;}#my-svg .edgePath .path{stroke:#94a3b8;stroke-width:1px;}#my-svg .flowchart-link{stroke:#94a3b8;fill:none;}#my-svg .edgeLabel{background-color:hsl(95, 21.4285714286%, 10.9803921569%);text-align:center;}#my-svg .edgeLabel p{background-color:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .edgeLabel rect{opacity:0.5;background-color:hsl(95, 21.4285714286%, 10.9803921569%);fill:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .labelBkg{background-color:rgba(27.0000000001, 34.0000000001, 22.0000000001, 0.5);}#my-svg .cluster rect{fill:hsl(35, 21.4285714286%, 15.9803921569%);stroke:hsl(35, 0%, 5.9803921569%);stroke-width:1px;}#my-svg .cluster text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster span{color:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:JetBrains Mono,monospace;font-size:12px;background:hsl(35, 21.4285714286%, 15.9803921569%);border:1px solid hsl(35, 0%, 5.9803921569%);border-radius:2px;pointer-events:none;z-index:100;}#my-svg .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#e2e8f0;}#my-svg rect.text{fill:none;stroke-width:0;}#my-svg .icon-shape,#my-svg .image-shape{background-color:hsl(95, 21.4285714286%, 10.9803921569%);text-align:center;}#my-svg .icon-shape p,#my-svg .image-shape p{background-color:hsl(95, 21.4285714286%, 10.9803921569%);padding:2px;}#my-svg .icon-shape .label rect,#my-svg .image-shape .label rect{opacity:0.5;background-color:hsl(95, 21.4285714286%, 10.9803921569%);fill:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#my-svg .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#my-svg .node .neo-node{stroke:#00f0ff;}#my-svg [data-look="neo"].node rect,#my-svg [data-look="neo"].cluster rect,#my-svg [data-look="neo"].node polygon{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].swimlane.cluster rect{filter:none;}#my-svg [data-look="neo"].node path{stroke:url(#my-svg-gradient);stroke-width:1px;}#my-svg [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node .neo-line path{stroke:#00f0ff;filter:none;}#my-svg [data-look="neo"].node circle{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node circle .state-start{fill:#000000;}#my-svg [data-look="neo"].icon-shape .icon{fill:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].icon-shape .icon-neo path{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#my-svg .hot&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(0, 240, 255)!important;stroke-width:2px!important;color:rgb(226, 232, 240)!important;}#my-svg .hot span{fill:rgb(13, 17, 23)!important;stroke:rgb(0, 240, 255)!important;stroke-width:2px!important;color:rgb(226, 232, 240)!important;}#my-svg .hot tspan{fill:rgb(226, 232, 240)!important;}#my-svg .green&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(16, 185, 129)!important;stroke-width:1.5px!important;color:rgb(226, 232, 240)!important;}#my-svg .green span{fill:rgb(13, 17, 23)!important;stroke:rgb(16, 185, 129)!important;stroke-width:1.5px!important;color:rgb(226, 232, 240)!important;}#my-svg .green tspan{fill:rgb(226, 232, 240)!important;}#my-svg .ext&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(100, 116, 139)!important;stroke-dasharray:4,3!important;color:rgb(148, 163, 184)!important;}#my-svg .ext span{fill:rgb(13, 17, 23)!important;stroke:rgb(100, 116, 139)!important;stroke-dasharray:4,3!important;color:rgb(148, 163, 184)!important;}#my-svg .ext tspan{fill:rgb(148, 163, 184)!important;}</style><g><marker id="my-svg_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="my-svg_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"/><g class="edgePaths"><path d="M138,86L138,90.167C138,94.333,138,102.667,138,110.333C138,118,138,125,138,128.5L138,132" id="my-svg-L_N0_N1_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_N0_N1_0" data-points="W3sieCI6MTM4LCJ5Ijo4Nn0seyJ4IjoxMzgsInkiOjExMX0seyJ4IjoxMzgsInkiOjEzNn1d" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M138,214L138,218.167C138,222.333,138,230.667,138,238.333C138,246,138,253,138,256.5L138,260" id="my-svg-L_N1_N2_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_N1_N2_0" data-points="W3sieCI6MTM4LCJ5IjoyMTR9LHsieCI6MTM4LCJ5IjoyMzl9LHsieCI6MTM4LCJ5IjoyNjR9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M138,342L138,346.167C138,350.333,138,358.667,138,366.333C138,374,138,381,138,384.5L138,388" id="my-svg-L_N2_N3_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_N2_N3_0" data-points="W3sieCI6MTM4LCJ5IjozNDJ9LHsieCI6MTM4LCJ5IjozNjd9LHsieCI6MTM4LCJ5IjozOTJ9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M138,470L138,474.167C138,478.333,138,486.667,138,494.333C138,502,138,509,138,512.5L138,516" id="my-svg-L_N3_N4_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_N3_N4_0" data-points="W3sieCI6MTM4LCJ5Ijo0NzB9LHsieCI6MTM4LCJ5Ijo0OTV9LHsieCI6MTM4LCJ5Ijo1MjB9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M138,598L138,602.167C138,606.333,138,614.667,138,622.333C138,630,138,637,138,640.5L138,644" id="my-svg-L_N4_N5_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_N4_N5_0" data-points="W3sieCI6MTM4LCJ5Ijo1OTh9LHsieCI6MTM4LCJ5Ijo2MjN9LHsieCI6MTM4LCJ5Ijo2NDh9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_N0_N1_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_N1_N2_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_N2_N3_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_N3_N4_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_N4_N5_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default hot" id="my-svg-flowchart-N0-0" data-look="classic" transform="translate(138, 47)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Request task-scoped lease</p></span></div></foreignObject></g></g><g class="node default hot" id="my-svg-flowchart-N1-1" data-look="classic" transform="translate(138, 175)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Policy and human approval</p></span></div></foreignObject></g></g><g class="node default hot" id="my-svg-flowchart-N2-2" data-look="classic" transform="translate(138, 303)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Issue provider TTL grant</p></span></div></foreignObject></g></g><g class="node default hot" id="my-svg-flowchart-N3-3" data-look="classic" transform="translate(138, 431)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Task closes or time expires</p></span></div></foreignObject></g></g><g class="node default hot" id="my-svg-flowchart-N4-4" data-look="classic" transform="translate(138, 559)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Revoke and independently check</p></span></div></foreignObject></g></g><g class="node default hot" id="my-svg-flowchart-N5-5" data-look="classic" transform="translate(138, 687)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Verified or unconfirmed alert</p></span></div></foreignObject></g></g></g></g><marker id="my-svg_flowchart-v2-pointEnd__00f0ff" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;" stroke="#00f0ff" fill="#00f0ff"/></marker></g><defs><filter id="my-svg-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="my-svg-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="my-svg-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00f0ff" stop-opacity="1"/><stop offset="100%" stop-color="hsl(95, 0%, 0.9803921569%)" stop-opacity="1"/></linearGradient></svg><pre class="source mermaid">%%{init: {&#x27;theme&#x27;:&#x27;base&#x27;,&#x27;themeVariables&#x27;:{&#x27;background&#x27;:&#x27;#0d1117&#x27;,&#x27;primaryColor&#x27;:&#x27;#161b22&#x27;,&#x27;primaryBorderColor&#x27;:&#x27;#00f0ff&#x27;,&#x27;primaryTextColor&#x27;:&#x27;#e2e8f0&#x27;,&#x27;lineColor&#x27;:&#x27;#94a3b8&#x27;,&#x27;fontFamily&#x27;:&#x27;JetBrains Mono, monospace&#x27;}}}%%
+graph TD
+ N0[&quot;Request task-scoped lease&quot;]:::hot
+ N1[&quot;Policy and human approval&quot;]:::hot
+ N2[&quot;Issue provider TTL grant&quot;]:::hot
+ N3[&quot;Task closes or time expires&quot;]:::hot
+ N4[&quot;Revoke and independently check&quot;]:::hot
+ N5[&quot;Verified or unconfirmed alert&quot;]:::hot
+ N0 ==&gt; N1
+ N1 ==&gt; N2
+ N2 ==&gt; N3
+ N3 ==&gt; N4
+ N4 ==&gt; N5
+
+classDef hot fill:#0d1117,stroke:#00f0ff,stroke-width:2px,color:#e2e8f0;
+classDef green fill:#0d1117,stroke:#10b981,stroke-width:1.5px,color:#e2e8f0;
+classDef ext fill:#0d1117,stroke:#64748b,stroke-dasharray:4 3,color:#94a3b8;
+linkStyle 0,1,2,3,4 stroke:#00f0ff,stroke-width:2px;
+</pre><div class="insight"><b>THE POINT:</b> Persist evidence at each boundary; unresolved outcomes remain visible.</div></div><div class="dg" data-diagram><div class="dg-head"><span class="dg-title">Acceptance decision</span><span class="dg-zoom">⊕ zoom</span></div><div class="dg-sub">Completion and acceptance are separate; uncertainty cannot become success.</div><svg id="my-svg" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 586px; background-color: rgb(13, 17, 23);" viewBox="0 0 586 702" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#my-svg{font-family:JetBrains Mono,monospace;font-size:16px;fill:#e2e8f0;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#my-svg .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#my-svg .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#my-svg .error-icon{fill:hsl(35, 21.4285714286%, 15.9803921569%);}#my-svg .error-text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);stroke:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .edge-thickness-normal{stroke-width:1px;}#my-svg .edge-thickness-thick{stroke-width:3.5px;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}#my-svg .edge-thickness-invisible{stroke-width:0;fill:none;}#my-svg .edge-pattern-dashed{stroke-dasharray:3;}#my-svg .edge-pattern-dotted{stroke-dasharray:2;}#my-svg .marker{fill:#94a3b8;stroke:#94a3b8;}#my-svg .marker.cross{stroke:#94a3b8;}#my-svg svg{font-family:JetBrains Mono,monospace;font-size:16px;}#my-svg p{margin:0;}#my-svg .label{font-family:JetBrains Mono,monospace;color:#e2e8f0;}#my-svg .cluster-label text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster-label span{color:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster-label span p{background-color:transparent;}#my-svg .label text,#my-svg span{fill:#e2e8f0;color:#e2e8f0;}#my-svg .node rect,#my-svg .node circle,#my-svg .node ellipse,#my-svg .node polygon,#my-svg .node path{fill:#161b22;stroke:#00f0ff;stroke-width:1px;}#my-svg .rough-node .label text,#my-svg .node .label text,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-anchor:middle;}#my-svg .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#my-svg .rough-node .label,#my-svg .node .label,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-align:center;}#my-svg .node.clickable{cursor:pointer;}#my-svg .root .anchor path{fill:#94a3b8!important;stroke-width:0;stroke:#94a3b8;}#my-svg .arrowheadPath{fill:#f2eee8;}#my-svg .edgePath .path{stroke:#94a3b8;stroke-width:1px;}#my-svg .flowchart-link{stroke:#94a3b8;fill:none;}#my-svg .edgeLabel{background-color:hsl(95, 21.4285714286%, 10.9803921569%);text-align:center;}#my-svg .edgeLabel p{background-color:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .edgeLabel rect{opacity:0.5;background-color:hsl(95, 21.4285714286%, 10.9803921569%);fill:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .labelBkg{background-color:rgba(27.0000000001, 34.0000000001, 22.0000000001, 0.5);}#my-svg .cluster rect{fill:hsl(35, 21.4285714286%, 15.9803921569%);stroke:hsl(35, 0%, 5.9803921569%);stroke-width:1px;}#my-svg .cluster text{fill:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg .cluster span{color:rgb(205.5178571427, 212.794642857, 222.9821428571);}#my-svg div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:JetBrains Mono,monospace;font-size:12px;background:hsl(35, 21.4285714286%, 15.9803921569%);border:1px solid hsl(35, 0%, 5.9803921569%);border-radius:2px;pointer-events:none;z-index:100;}#my-svg .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#e2e8f0;}#my-svg rect.text{fill:none;stroke-width:0;}#my-svg .icon-shape,#my-svg .image-shape{background-color:hsl(95, 21.4285714286%, 10.9803921569%);text-align:center;}#my-svg .icon-shape p,#my-svg .image-shape p{background-color:hsl(95, 21.4285714286%, 10.9803921569%);padding:2px;}#my-svg .icon-shape .label rect,#my-svg .image-shape .label rect{opacity:0.5;background-color:hsl(95, 21.4285714286%, 10.9803921569%);fill:hsl(95, 21.4285714286%, 10.9803921569%);}#my-svg .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#my-svg .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#my-svg .node .neo-node{stroke:#00f0ff;}#my-svg [data-look="neo"].node rect,#my-svg [data-look="neo"].cluster rect,#my-svg [data-look="neo"].node polygon{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].swimlane.cluster rect{filter:none;}#my-svg [data-look="neo"].node path{stroke:url(#my-svg-gradient);stroke-width:1px;}#my-svg [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node .neo-line path{stroke:#00f0ff;filter:none;}#my-svg [data-look="neo"].node circle{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node circle .state-start{fill:#000000;}#my-svg [data-look="neo"].icon-shape .icon{fill:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].icon-shape .icon-neo path{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#my-svg .hot&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(0, 240, 255)!important;stroke-width:2px!important;color:rgb(226, 232, 240)!important;}#my-svg .hot span{fill:rgb(13, 17, 23)!important;stroke:rgb(0, 240, 255)!important;stroke-width:2px!important;color:rgb(226, 232, 240)!important;}#my-svg .hot tspan{fill:rgb(226, 232, 240)!important;}#my-svg .green&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(16, 185, 129)!important;stroke-width:1.5px!important;color:rgb(226, 232, 240)!important;}#my-svg .green span{fill:rgb(13, 17, 23)!important;stroke:rgb(16, 185, 129)!important;stroke-width:1.5px!important;color:rgb(226, 232, 240)!important;}#my-svg .green tspan{fill:rgb(226, 232, 240)!important;}#my-svg .ext&gt;*{fill:rgb(13, 17, 23)!important;stroke:rgb(100, 116, 139)!important;stroke-dasharray:4,3!important;color:rgb(148, 163, 184)!important;}#my-svg .ext span{fill:rgb(13, 17, 23)!important;stroke:rgb(100, 116, 139)!important;stroke-dasharray:4,3!important;color:rgb(148, 163, 184)!important;}#my-svg .ext tspan{fill:rgb(148, 163, 184)!important;}</style><g><marker id="my-svg_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="my-svg_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"/><g class="edgePaths"><path d="M293,62L293,66.167C293,70.333,293,78.667,293,86.333C293,94,293,101,293,104.5L293,108" id="my-svg-L_A_B_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6MjkzLCJ5Ijo2Mn0seyJ4IjoyOTMsInkiOjg3fSx7IngiOjI5MywieSI6MTEyfV0=" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M227.909,324.909L212.924,341.924C197.94,358.94,167.97,392.97,152.985,415.485C138,438,138,449,138,454.5L138,460" id="my-svg-L_B_C_0" class="edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke:#00f0ff;stroke-width:2px;fill:none;;;stroke:#00f0ff;stroke-width:2px;fill:none" data-edge="true" data-et="edge" data-id="L_B_C_0" data-points="W3sieCI6MjI3LjkwOTM2NTU1ODkxMjM4LCJ5IjozMjQuOTA5MzY1NTU4OTEyNH0seyJ4IjoxMzgsInkiOjQyN30seyJ4IjoxMzgsInkiOjQ2NH1d" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd__00f0ff)"/><path d="M358.091,324.909L373.076,341.924C388.06,358.94,418.03,392.97,433.015,415.485C448,438,448,449,448,454.5L448,460" id="my-svg-L_B_D_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B_D_0" data-points="W3sieCI6MzU4LjA5MDYzNDQ0MTA4NzYsInkiOjMyNC45MDkzNjU1NTg5MTI0fSx7IngiOjQ0OCwieSI6NDI3fSx7IngiOjQ0OCwieSI6NDY0fV0=" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd)"/><path d="M448,542L448,546.167C448,550.333,448,558.667,448,566.333C448,574,448,581,448,584.5L448,588" id="my-svg-L_D_E_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_D_E_0" data-points="W3sieCI6NDQ4LCJ5Ijo1NDJ9LHsieCI6NDQ4LCJ5Ijo1Njd9LHsieCI6NDQ4LCJ5Ijo1OTJ9XQ==" data-look="classic" marker-end="url(#my-svg_flowchart-v2-pointEnd)"/></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_A_B_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(138, 427)"><g class="label" data-id="L_B_C_0" transform="translate(-14.453125, -12)"><foreignObject width="28.90625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>Yes</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(448, 427)"><g class="label" data-id="L_B_D_0" transform="translate(-72.25, -12)"><foreignObject width="144.5" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>No or uncertain</p></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_D_E_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default hot" id="my-svg-flowchart-A-0" data-look="classic" transform="translate(293, 35)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-111.8828125" y="-27" width="223.765625" height="54"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-81.8828125, -12)"><rect/><foreignObject width="163.765625" height="24"><div style="color: rgb(226, 232, 240) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Evaluate evidence</p></span></div></foreignObject></g></g><g class="node default hot" id="my-svg-flowchart-B-1" data-look="classic" transform="translate(293, 251)"><polygon points="139,0 278,-139 139,-278 0,-139" class="label-container" transform="translate(-138.5, 139)" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>All required checks satisfied?</p></span></div></foreignObject></g></g><g class="node default green" id="my-svg-flowchart-C-2" data-look="classic" transform="translate(138, 503)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#10b981 !important;stroke-width:1.5px !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Record accepted result</p></span></div></foreignObject></g></g><g class="node default ext" id="my-svg-flowchart-D-3" data-look="classic" transform="translate(448, 503)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#64748b !important;stroke-dasharray:4 3 !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#94a3b8 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(148, 163, 184) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#94a3b8 !important" class="nodeLabel"><p>Record failed or unknown result</p></span></div></foreignObject></g></g><g class="node default hot" id="my-svg-flowchart-E-4" data-look="classic" transform="translate(448, 643)"><rect class="basic label-container" style="fill:#0d1117 !important;stroke:#00f0ff !important;stroke-width:2px !important" x="-130" y="-51" width="260" height="102"/><g class="label" style="color:#e2e8f0 !important" transform="translate(-100, -36)"><rect/><foreignObject width="200" height="72"><div style="color: rgb(226, 232, 240) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e2e8f0 !important" class="nodeLabel"><p>Operator sees reasons and next step</p></span></div></foreignObject></g></g></g></g><marker id="my-svg_flowchart-v2-pointEnd__00f0ff" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;" stroke="#00f0ff" fill="#00f0ff"/></marker></g><defs><filter id="my-svg-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="my-svg-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="my-svg-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00f0ff" stop-opacity="1"/><stop offset="100%" stop-color="hsl(95, 0%, 0.9803921569%)" stop-opacity="1"/></linearGradient></svg><pre class="source mermaid">%%{init: {&#x27;theme&#x27;:&#x27;base&#x27;,&#x27;themeVariables&#x27;:{&#x27;background&#x27;:&#x27;#0d1117&#x27;,&#x27;primaryColor&#x27;:&#x27;#161b22&#x27;,&#x27;primaryBorderColor&#x27;:&#x27;#00f0ff&#x27;,&#x27;primaryTextColor&#x27;:&#x27;#e2e8f0&#x27;,&#x27;lineColor&#x27;:&#x27;#94a3b8&#x27;,&#x27;fontFamily&#x27;:&#x27;JetBrains Mono, monospace&#x27;}}}%%
+graph TD
+ A[&quot;Evaluate evidence&quot;]:::hot
+ B{&quot;All required checks satisfied?&quot;}:::hot
+ C[&quot;Record accepted result&quot;]:::green
+ D[&quot;Record failed or unknown result&quot;]:::ext
+ E[&quot;Operator sees reasons and next step&quot;]:::hot
+ A ==&gt; B
+ B ==&gt;|Yes| C
+ B --&gt;|No or uncertain| D
+ D --&gt; E
+
+classDef hot fill:#0d1117,stroke:#00f0ff,stroke-width:2px,color:#e2e8f0;
+classDef green fill:#0d1117,stroke:#10b981,stroke-width:1.5px,color:#e2e8f0;
+classDef ext fill:#0d1117,stroke:#64748b,stroke-dasharray:4 3,color:#94a3b8;
+linkStyle 0,1 stroke:#00f0ff,stroke-width:2px;
+</pre><div class="insight"><b>THE POINT:</b> Completion and acceptance are separate; uncertainty cannot become success.</div></div><h2>Open decisions</h2><p>Select a provider with native TTL, narrow scopes and revocation verification; decide the acceptable residual-access window before a live pilot.</p><h2>Risk flags</h2><p>Provider TTL and revocation semantics differ; cached access may outlive a grant. The chosen provider contract must define and test the maximum residual-access window.</p><script>document.querySelectorAll('input[type=checkbox]').forEach((e,i)=>{const k=location.pathname+':operator:'+i;e.checked=localStorage.getItem(k)==='1';e.addEventListener('change',()=>localStorage.setItem(k,e.checked?'1':'0'))});document.querySelectorAll('.dg').forEach(f=>f.addEventListener('click',()=>{const s=f.querySelector('svg');if(!s)return;const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:#080c12ee;z-index:9999;overflow:auto;padding:4vw;cursor:zoom-out';o.innerHTML=s.outerHTML;o.onclick=()=>o.remove();document.body.appendChild(o)}));</script><script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';mermaid.initialize({startOnLoad:false,securityLevel:'strict'});</script></body></html>

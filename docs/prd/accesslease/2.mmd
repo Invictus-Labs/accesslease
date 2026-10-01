@@ -1,0 +1,16 @@
+%%{init: {'theme':'base','themeVariables':{'background':'#0d1117','primaryColor':'#161b22','primaryBorderColor':'#00f0ff','primaryTextColor':'#e2e8f0','lineColor':'#94a3b8','fontFamily':'JetBrains Mono, monospace'}}}%%
+graph TD
+ A["Evaluate evidence"]:::hot
+ B{"All required checks satisfied?"}:::hot
+ C["Record accepted result"]:::green
+ D["Record failed or unknown result"]:::ext
+ E["Operator sees reasons and next step"]:::hot
+ A ==> B
+ B ==>|Yes| C
+ B -->|No or uncertain| D
+ D --> E
+
+classDef hot fill:#0d1117,stroke:#00f0ff,stroke-width:2px,color:#e2e8f0;
+classDef green fill:#0d1117,stroke:#10b981,stroke-width:1.5px,color:#e2e8f0;
+classDef ext fill:#0d1117,stroke:#64748b,stroke-dasharray:4 3,color:#94a3b8;
+linkStyle 0,1 stroke:#00f0ff,stroke-width:2px;
