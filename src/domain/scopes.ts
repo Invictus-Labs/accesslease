@@ -82,7 +82,7 @@ export function parsePgScope(scope: string): ParsedPgScope | null {
 }
 
 /** System catalogs are never grantable (e.g. pg_catalog.pg_authid holds password hashes): pg_catalog, information_schema and every pg_* schema. */
-export const isSystemSchema = (schema: string): boolean => schema === "information_schema" || schema.startsWith("pg_");
+export const isSystemSchema = (schema: string): boolean => schema === "information_schema" || schema === "accesslease_control" || schema.startsWith("pg_");
 
 export const isPgDatabaseName = (name: string): boolean => PG_DATABASE.test(name) && !name.startsWith("template");
 export const isSyntheticScope = (scope: string): boolean => SYNTHETIC_SCOPE.test(scope);

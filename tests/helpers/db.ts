@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import pg from "pg";
 
@@ -93,6 +94,7 @@ export async function freshProviderTarget(): Promise<ProviderTarget> {
   await withAdmin(clusterUrl, (c) => c.query(`CREATE DATABASE ${database}`));
   const adminUrl = withDatabase(clusterUrl, database);
   await withAdmin(adminUrl, async (c) => {
+    await c.query(await readFile(new URL("../../provider-migrations/001_terminal_fences.sql", import.meta.url), "utf8"));
     await c.query(`CREATE SCHEMA ${schema}`);
     await c.query(`CREATE TABLE ${schema}.${table} (id serial PRIMARY KEY, body text NOT NULL)`);
     await c.query(`CREATE TABLE ${schema}.other_records (id serial PRIMARY KEY, body text NOT NULL)`);

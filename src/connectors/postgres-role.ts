@@ -93,7 +93,7 @@ export class PostgresRoleProvider implements Provider {
     if (!generic.ok) return generic;
     const parsed = parsePgScope(scope);
     if (!parsed) return { ok: false, code: "invalid_scope", message: "scope must match pg:<schema>.<table>:<select|insert|update>" };
-    if (isSystemSchema(parsed.schema)) return { ok: false, code: "scope_forbidden", message: "system schemas (pg_catalog, information_schema, pg_*) cannot be granted" };
+    if (isSystemSchema(parsed.schema)) return { ok: false, code: "scope_forbidden", message: "system and AccessLease control schemas cannot be granted" };
     return { ok: true };
   }
 
@@ -193,6 +193,45 @@ export class PostgresRoleProvider implements Provider {
     });
   }
 
+  /** Explicitly provisioned in each resource database; never create control objects on a live call. */
+  private async lockTerminalFence(client: pg.Client, target: GrantTarget, terminal: boolean): Promise<void> {
+    const control = await client.query<{ schema_owner: string; table_owner: string; schema_version: string | null; table_version: string | null; kind: string; private_acl: boolean; durable: boolean; no_rls: boolean }>(
+      `SELECT pg_get_userbyid(n.nspowner) AS schema_owner, pg_get_userbyid(c.relowner) AS table_owner,
+              obj_description(n.oid, 'pg_namespace') AS schema_version,
+              obj_description(c.oid, 'pg_class') AS table_version, c.relkind AS kind,
+              c.relpersistence = 'p' AS durable, NOT (c.relrowsecurity OR c.relforcerowsecurity) AS no_rls,
+              (NOT EXISTS (SELECT 1 FROM aclexplode(COALESCE(n.nspacl, acldefault('n', n.nspowner))) a WHERE a.grantee <> n.nspowner)
+               AND NOT EXISTS (SELECT 1 FROM aclexplode(COALESCE(c.relacl, acldefault('r', c.relowner))) a WHERE a.grantee <> c.relowner)
+               AND NOT EXISTS (SELECT 1 FROM pg_attribute x, LATERAL aclexplode(x.attacl) a WHERE x.attrelid = c.oid AND a.grantee <> c.relowner)) AS private_acl
+         FROM pg_namespace n JOIN pg_class c ON c.relnamespace = n.oid
+        WHERE n.nspname = 'accesslease_control' AND c.relname = 'terminal_fences'`,
+    );
+    const owner = (await client.query<{ name: string }>("SELECT current_user AS name")).rows[0]?.name;
+    const facts = control.rows[0];
+    if (!owner || !facts || facts.schema_owner !== owner || facts.table_owner !== owner || facts.kind !== "r" ||
+        !facts.private_acl || !facts.durable || !facts.no_rls ||
+        facts.schema_version !== "accesslease:provider-control:v1" || facts.table_version !== "accesslease:terminal-fences:v1") {
+      throw new ProviderUnavailableError("provider_unavailable", "provider control schema/table is missing, unsupported, publicly accessible or not privately owned by the configured administrator");
+    }
+    const ref = roleNameFor(target.leaseId);
+    // Same resource database and key for issue/revoke. Acquired before touching the role, retained through COMMIT.
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [`accesslease:terminal-fence:${ref}`]);
+    const existing = await client.query<{ lease_id: string; resource_ref: string }>(
+      "SELECT lease_id::text, resource_ref FROM accesslease_control.terminal_fences WHERE provider_ref = $1", [ref],
+    );
+    const fence = existing.rows[0];
+    if (fence && (fence.lease_id !== target.leaseId || fence.resource_ref !== target.resource)) {
+      throw new ProviderUnavailableError("provider_unavailable", "terminal fence identity does not match this lease");
+    }
+    if (!terminal && fence) throw new ProviderRejectedError("grant_terminal", "this lease was terminally closed at the provider; it cannot issue again");
+    if (terminal && !fence) {
+      await client.query(
+        "INSERT INTO accesslease_control.terminal_fences (provider_ref, lease_id, resource_ref) VALUES ($1,$2,$3)",
+        [ref, target.leaseId, target.resource],
+      );
+    }
+  }
+
   // ---- issue (create or align, one transaction) ----
 
   async issue(request: IssueRequest): Promise<IssueResult> {
@@ -216,8 +255,11 @@ export class PostgresRoleProvider implements Provider {
     try {
       const q = (id: string) => client.escapeIdentifier(id);
       const lit = (value: string) => client.escapeLiteral(value);
-      await client.query("BEGIN");
+      // Do not inherit REPEATABLE READ: the fence read after a waited lock needs the latest committed row.
+      await client.query("BEGIN ISOLATION LEVEL READ COMMITTED");
       begun = true;
+      await this.lockTerminalFence(client, request, false);
+      if (request.expiresAt.getTime() <= Date.now()) throw new ProviderRejectedError("expired", "expires_at elapsed while waiting for the provider fence");
       const existing = await client.query<{ comment: string | null }>("SELECT shobj_description(oid, 'pg_authid') AS comment FROM pg_roles WHERE rolname = $1", [role]);
       const alreadyExisted = existing.rows.length > 0;
       if (alreadyExisted && existing.rows[0]?.comment !== marker) throw new ProviderRejectedError("role_collision", "a role with the derived name exists and was not created by this lease");
@@ -259,7 +301,7 @@ export class PostgresRoleProvider implements Provider {
       };
     } catch (error) {
       if (begun) await client.query("ROLLBACK").catch(() => undefined);
-      if (error instanceof ProviderRejectedError) throw error;
+      if (error instanceof ProviderRejectedError || error instanceof ProviderUnavailableError) throw error;
       if (isConnectionError(error)) throw new ProviderUnavailableError("provider_ambiguous", "connection lost while issuing; the outcome is unknown");
       const code = (error as { code?: string }).code ?? "";
       // SQL error with a SQLSTATE inside the transaction: everything was rolled back, nothing was created.
@@ -321,6 +363,24 @@ export class PostgresRoleProvider implements Provider {
   // ---- revocation ----
 
   async revoke(target: GrantTarget): Promise<RevokeResult> {
+    // The durable terminal record commits even when cleanup is partial. A later retry can finish cleanup,
+    // but no delayed issue (including after restart or restored stale metadata) can resurrect this role.
+    return this.withAdmin(target.resource, async (client) => {
+      // Do not inherit REPEATABLE READ: the fence read after a waited lock needs the latest committed row.
+      await client.query("BEGIN ISOLATION LEVEL READ COMMITTED");
+      try {
+        await this.lockTerminalFence(client, target, true);
+        const result = await this.revokeFenced(target);
+        await client.query("COMMIT");
+        return result;
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      }
+    });
+  }
+
+  private async revokeFenced(target: GrantTarget): Promise<RevokeResult> {
     const role = roleNameFor(target.leaseId);
     const steps: RevokeStep[] = [];
     let terminated = 0;

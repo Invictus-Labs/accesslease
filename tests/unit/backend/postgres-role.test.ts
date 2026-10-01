@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { randomBytes, randomUUID } from "node:crypto";
 import net from "node:net";
 import pg from "pg";
@@ -105,6 +106,7 @@ beforeAll(async () => {
   await maintenance.query(`CREATE DATABASE ${dbName}`);
   await maintenance.end();
   admin = await adminClient(dbName);
+  await admin.query(await readFile(new URL("../../../provider-migrations/001_terminal_fences.sql", import.meta.url), "utf8"));
   await admin.query("CREATE SCHEMA app");
   await admin.query("CREATE TABLE app.orders (id int PRIMARY KEY, note text)");
   await admin.query("CREATE TABLE app.secrets (id int PRIMARY KEY, v text)");

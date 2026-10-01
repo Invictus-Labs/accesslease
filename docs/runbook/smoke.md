@@ -138,6 +138,8 @@ Imported leases are read-only evidence; the worker never acts on them.
 
 ## Part E: the real local provider (optional, about 10 minutes)
 
+The provider now requires explicit terminal-fence provisioning before issuing any lease; follow [provider-control.md](provider-control.md) after starting the provider database. Earlier Part E receipts predate this prerequisite and do not verify it.
+
 Only the real PostgreSQL role provider can satisfy a live criterion; the synthetic provider never does. Set `PROVIDER_DB_PASSWORD` in `.env` (a generated value) first.
 
 ```bash
