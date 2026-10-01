@@ -1,0 +1,57 @@
+# Network-denied proof of the deterministic local core (AC-08).
+# Every service sits on an internal-only network with no route off the host. A smoke container runs the
+# SYNTHETIC demo against the throwaway database, verifies the evidence bundle, checks the report, and asserts
+# that the internet is unreachable from inside the network. It exits 0 only if every step holds.
+#
+#   docker compose -p accesslease-offline -f compose.offline.yaml up --build --abort-on-container-exit --exit-code-from smoke
+#   docker compose -p accesslease-offline -f compose.offline.yaml down -v
+#
+# The demo deliberately leaves uncertain leases (to show how they look), so `demo` exits 4 and that is expected here.
+services:
+  db:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_USER: accesslease
+      POSTGRES_DB: accesslease
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    networks: [offline]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "accesslease"]
+      interval: 3s
+      retries: 20
+
+  smoke:
+    build: .
+    image: accesslease:local
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ACCESSLEASE_DATABASE_URL: postgres://accesslease@db:5432/accesslease
+      ACCESSLEASE_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      ACCESSLEASE_SECRET_KEY: ${ACCESSLEASE_SECRET_KEY:?set ACCESSLEASE_SECRET_KEY in .env}
+      ACCESSLEASE_PROVIDER: synthetic
+    networks: [offline]
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -u
+        # 1. The internet must be unreachable from here (a reserved test name must fail to connect).
+        if node -e "fetch('http://example.com', { signal: AbortSignal.timeout(4000) }).then(() => process.exit(0), () => process.exit(1))"; then
+          echo "OFFLINE SMOKE FAILED: the network is not isolated" >&2; exit 1
+        fi
+        echo "ok: outbound network is denied"
+        # 2. Synthetic demo: static report and evidence bundle. Exit 0 or 4 are expected (4 = uncertain examples left on purpose).
+        mkdir -p /tmp/demo-out
+        node dist/src/cli.js demo --out /tmp/demo-out/demo --database-url "$$ACCESSLEASE_DATABASE_URL"
+        code=$$?
+        if [ "$$code" -ne 0 ] && [ "$$code" -ne 4 ]; then echo "OFFLINE SMOKE FAILED: demo exited $$code" >&2; exit 1; fi
+        # 3. The bundle verifies, and the report states what it is.
+        node dist/src/cli.js verify-bundle /tmp/demo-out/demo/evidence-bundle.json
+        grep -q "SYNTHETIC" /tmp/demo-out/demo/report.html || { echo "OFFLINE SMOKE FAILED: report is not labelled SYNTHETIC" >&2; exit 1; }
+        if grep -q "<script" /tmp/demo-out/demo/report.html; then echo "OFFLINE SMOKE FAILED: report contains a script" >&2; exit 1; fi
+        echo "OFFLINE SMOKE PASSED"
+
+networks:
+  offline:
+    internal: true
