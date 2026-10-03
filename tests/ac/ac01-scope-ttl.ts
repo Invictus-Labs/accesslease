@@ -42,6 +42,10 @@ export function scopeAndTtlPolicy(): void {
       { scopes: ["all"], codes: ["scope_wildcard", "invalid_scope"] },
       { scopes: [scope("superuser")], codes: ["scope_forbidden", "invalid_scope"] },
       { scopes: ["admin"], codes: ["scope_forbidden", "invalid_scope"] },
+      // Valid provider grammar must still hit the generic administrative-scope ban.
+      // Otherwise malformed privilege examples can pass through the grammar rejection alone.
+      { scopes: ["pg:admin.records:select"], codes: ["scope_forbidden"] },
+      { scopes: ["pg:app.superuser_records:select"], codes: ["scope_forbidden"] },
       { scopes: [scope("delete")], codes: ["scope_forbidden", "invalid_scope"] },
       { scopes: [scope("select"), "pg:app.records:createrole"], codes: ["scope_forbidden", "invalid_scope"] },
       { scopes: [scope("select"), "*"], codes: ["scope_wildcard"] },

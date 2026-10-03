@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { randomBytes, randomUUID } from "node:crypto";
 import net from "node:net";
+import { commitFrameMatcher } from "../../helpers/commit-frame.js";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PostgresRoleProvider } from "../../../src/connectors/postgres-role.js";
@@ -21,16 +22,20 @@ const SECRET = "Fake-Provider-Secret-0123456789";
 function startProxy(targetPort: number) {
   const sockets = new Set<net.Socket>();
   let dropOn: string | null = null;
+  let dropCommit = false;
   let server: net.Server;
   const make = () =>
     net.createServer((client) => {
       const upstream = net.connect(targetPort, "127.0.0.1");
       let swallow = false;
+      const matchesCommit = commitFrameMatcher();
       sockets.add(client);
       sockets.add(upstream);
       client.on("data", (chunk) => {
         upstream.write(chunk);
-        if (dropOn && chunk.includes(dropOn)) {
+        const commit = matchesCommit(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+        if ((dropCommit && commit) || (dropOn && chunk.includes(dropOn))) {
+          dropCommit = false;
           dropOn = null;
           swallow = true;
           // let the server execute the statement, then cut the line before the answer reaches the client
@@ -68,10 +73,12 @@ function startProxy(targetPort: number) {
       await new Promise((resolve) => server.close(resolve));
     },
     dropNextCommit() {
-      dropOn = "COMMIT";
+      dropOn = null;
+      dropCommit = true;
     },
     /** Cut the connection the next time a client message contains `text`. */
     dropNextMatching(text: string) {
+      dropCommit = false;
       dropOn = text;
     },
   };

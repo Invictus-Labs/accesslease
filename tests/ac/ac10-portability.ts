@@ -148,6 +148,14 @@ export function portabilityAndCorruption(): void {
     const lastBroken = clone(bundle);
     (lastBroken.files[names.at(-1)!] as Record<string, any>).lease.task_ref = "tampered after the others were fine";
     await expectRefused("last file corrupt", JSON.stringify(lastBroken), ["bundle_hash_mismatch", "bundle_manifest_mismatch"]);
+    // Preserve the manifest's recorded file hash, but make the outer seal valid:
+    // otherwise outer-seal rejection masks a missing per-file verification guard.
+    const fileHashOnly = clone(bundle);
+    (fileHashOnly.files[leaseFile] as Record<string, any>).lease.task_ref += "-tampered";
+    const { bundle_hash: _oldSeal, ...unsealed } = fileHashOnly;
+    fileHashOnly.bundle_hash = hashCanonical(unsealed);
+    expect(bundleHashProblems(fileHashOnly)).toEqual([`hash mismatch ${leaseFile}`]);
+    await expectRefused("content changed with valid outer seal", JSON.stringify(fileHashOnly), ["bundle_hash_mismatch"]);
   });
 
   it("re-sealed bundles with unsafe paths, broken references or too many files are refused with no partial state", async () => {

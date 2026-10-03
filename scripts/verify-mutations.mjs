@@ -25,7 +25,7 @@ if (selected.length === 0) {
 
 const root = mkdtempSync(join(tmpdir(), "accesslease-mutations-"));
 const results = [];
-const copy = ["src", "tests", "migrations", "schemas", "fixtures", "scripts", "templates", "package.json", "tsconfig.json", "tsconfig.web.json", "vitest.config.ts", "vite.config.ts"];
+const copy = ["src", "tests", "migrations", "provider-migrations", "schemas", "fixtures", "scripts", "templates", "package.json", "tsconfig.json", "tsconfig.web.json", "vitest.config.ts", "vite.config.ts"];
 const sha = (text) => createHash("sha256").update(text).digest("hex");
 let exitCode = 0;
 

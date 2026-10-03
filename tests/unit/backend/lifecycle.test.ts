@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "../../../src/context.js";
 import { AppError } from "../../../src/errors.js";
 import { claimJob, fence, LeaseLostError, markDone } from "../../../src/services/jobs.js";
-import { closeLease, getLease, listLeases, requestLease, retrieveCredential, revokeLease } from "../../../src/services/leases.js";
+import { approveLease, closeLease, getLease, listLeases, requestLease, retrieveCredential, revokeLease } from "../../../src/services/leases.js";
 import { pullEvents } from "../../../src/services/events.js";
 import { runWorkerOnce, sweepOverdue } from "../../../src/workers/index.js";
 import { credentialSecretFor } from "../../../src/workers/issue.js";
