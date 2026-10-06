@@ -75,9 +75,11 @@ export function restartAndRestore(): void {
     const workerB = spawnChild(process.execPath, [workerScript], childEnv({ QA_JOB_LEASE_SECONDS: "3", QA_WORKER_ID: "qa-B" }));
     try {
       await waitForLine(workerB, /^READY$/);
-      await waitFor("lease ACTIVE after reclaim", async () => (await getLease(h, ws.operator.session, created.id)).state === "active", 60_000, 250);
+      // Assert the reclaim itself, so a worker that never reclaims fails with an assertion rather than a bare wait timeout.
+      const active = await waitFor("lease ACTIVE after reclaim", async () => (await getLease(h, ws.operator.session, created.id)).state === "active", 60_000, 250).then(() => true, () => false);
       const reports = workerB.stdout.filter((l) => l.startsWith("{")).map((l) => JSON.parse(l));
       expect(reports.some((r) => r.sweep?.jobsReclaimed >= 1), `worker B reports: ${workerB.stdout.join(" ")}`).toBe(true);
+      expect(active, "the reclaimed job completes and the lease becomes ACTIVE").toBe(true);
     } finally {
       await workerB.kill("SIGTERM");
     }
@@ -119,7 +121,11 @@ export function restartAndRestore(): void {
     const workerB = spawnChild(process.execPath, [workerScript], childEnv({ QA_JOB_LEASE_SECONDS: "3", QA_WORKER_ID: "qa-B2" }));
     try {
       await waitForLine(workerB, /^READY$/);
-      await waitFor("lease ACTIVE", async () => (await getLease(h, ws.operator.session, created.id)).state === "active", 60_000, 250);
+      // Assert the reclaim itself, so a worker that never reclaims fails with an assertion rather than a bare wait timeout.
+      const active = await waitFor("lease ACTIVE", async () => (await getLease(h, ws.operator.session, created.id)).state === "active", 60_000, 250).then(() => true, () => false);
+      const reports = workerB.stdout.filter((l) => l.startsWith("{")).map((l) => JSON.parse(l));
+      expect(reports.some((r) => r.sweep?.jobsReclaimed >= 1), `worker B reports: ${workerB.stdout.join(" ")}`).toBe(true);
+      expect(active, "the reclaimed job adopts the grant and the lease becomes ACTIVE").toBe(true);
     } finally {
       await workerB.kill("SIGTERM");
     }

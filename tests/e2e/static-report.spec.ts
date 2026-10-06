@@ -16,7 +16,9 @@ let dir: string;
 const cli = join(repoRoot, "dist/src/cli.js");
 
 test.beforeAll(async () => {
-  stack = await startStack();
+  // The embedded worker passes once at start, then sleeps for the poll interval. With the default 250 ms it could verify the
+  // revoked lease before the report is generated, legitimately turning it green; the maximum interval keeps it unresolved.
+  stack = await startStack({ workerPollMs: 60_000 });
   dir = mkdtempSync(join(tmpdir(), "al-report-"));
 });
 test.afterAll(async () => {

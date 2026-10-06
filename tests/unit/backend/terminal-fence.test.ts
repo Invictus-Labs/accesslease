@@ -191,6 +191,14 @@ describe("terminal fence worker ordering (synthetic)", () => {
     expect(await processRevoke(w.ctx,job)).toBe('unconfirmed');
     expect(w.lease.state).toBe('REVOCATION_UNCONFIRMED');expect(h.role).toBe(false);expect(h.fence).toBeUndefined();
   });
+  it("a surviving role is not verified even when every revoke step reports success and the login probe is denied", async () => {
+    const h=harness();await h.provider.issue(h.request());const w=workerHarness(h);
+    // Steps report success but leave the role in place; the probe alone is denied (e.g. a credential that no longer matches).
+    h.internals.revokeFenced=async()=>({steps:[{step:'disable_login',ok:true},{step:'drop_role',ok:true}],sessionsTerminated:0});
+    h.provider.probeUse=async()=>'denied';
+    expect(await processRevoke(w.ctx,await w.close())).toBe('unconfirmed');
+    expect(w.lease.state).toBe('REVOCATION_UNCONFIRMED');expect(h.role).toBe(true);
+  });
   it("keeps failed session termination unconfirmed and permanently rejects a late issue", async () => {
     const h=harness();await h.provider.issue(h.request());const w=workerHarness(h);
     h.internals.revokeFenced=async()=>({steps:[{step:'terminate_sessions',ok:false}],sessionsTerminated:0});
