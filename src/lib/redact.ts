@@ -27,9 +27,9 @@ const PATTERNS: RegExp[] = [
   /\b[A-Z0-9]+(?:_[A-Z0-9]+)*_(?:SECRET|TOKEN|PASSWORD|API_KEY)(?:_[A-Za-z0-9]+)+\b/g,
 ];
 
-/** `password=hunter2`, `"api_key": "abc"`, `token: abc` inside free text. */
+/** `password=hunter2`, `db_password=x`, `"api_key": "abc"`, `access_token: abc` inside free text (prefixed and suffixed keys too). */
 const ASSIGNMENT =
-  /\b((?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|credential|private[_-]?key|access[_-]?key|client[_-]?secret)["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|\S+)/gi;
+  /\b([\w-]*?(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|credential|private[_-]?key|access[_-]?key|client[_-]?secret)[\w-]*["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|\S+)/gi;
 const URL_USERINFO = /(\b[a-z][a-z0-9+.-]*:\/\/[^\s/:@]+:)([^\s/@]+)(@)/gi;
 
 const registered = new Set<string>();

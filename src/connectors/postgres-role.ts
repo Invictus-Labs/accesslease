@@ -376,25 +376,29 @@ export class PostgresRoleProvider implements Provider {
       const present = await this.withAdmin(null, async (client) =>
         (await client.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [roleNameFor(target.leaseId)])).rows.length > 0,
       );
-      if (present) throw error;
-      return { steps: [{ step: "resource_database_absent", ok: true }, { step: "role_absent", ok: true }], sessionsTerminated: 0 };
+      if (!present) return { steps: [{ step: "resource_database_absent", ok: true }, { step: "role_absent", ok: true }], sessionsTerminated: 0 };
+      // The role survives (for example the database was renamed after issuance): still block logins, end sessions and try
+      // to drop it cluster-wide. Without a fence the attempt can never verify, so the lease stays unconfirmed.
+      const cleanup = await this.revokeFenced(target);
+      return { steps: [{ step: "terminal_fence", ok: false, detail: "resource database does not exist; no fence written" }, ...cleanup.steps], sessionsTerminated: cleanup.sessionsTerminated };
     }
   }
 
   private async revokeWithFence(target: GrantTarget): Promise<RevokeResult> {
-    return this.withAdmin(target.resource, async (client) => {
+    // Commit the terminal record before any cleanup, in its own transaction: cleanup runs on separate connections and may
+    // fail part-way (even as ProviderUnavailableError), and that must never roll the fence back after logins were touched.
+    await this.withAdmin(target.resource, async (client) => {
       // Do not inherit REPEATABLE READ: the fence read after a waited lock needs the latest committed row.
       await client.query("BEGIN ISOLATION LEVEL READ COMMITTED");
       try {
         await this.lockTerminalFence(client, target, true);
-        const result = await this.revokeFenced(target);
         await client.query("COMMIT");
-        return result;
       } catch (error) {
         await client.query("ROLLBACK").catch(() => undefined);
         throw error;
       }
     });
+    return this.revokeFenced(target);
   }
 
   private async revokeFenced(target: GrantTarget): Promise<RevokeResult> {

@@ -109,6 +109,14 @@ describe("redaction (AC-09)", () => {
     for (const text of ["password=Tr0ub4dor&3-example", 'api_key: "ab&cd;ef"', "client_secret=ab&cd"]) expect(redactText(text)).not.toMatch(/Tr0ub|3-example|ab&|cd;|&cd/);
   });
 
+  it("redacts prefixed and suffixed credential keys (db_password=, access_token=, PGPASSWORD=)", () => {
+    for (const key of ["db_password", "DB_PASSWORD", "PGPASSWORD", "access_token", "refresh_token", "api_key_v2", "x-auth-token"]) {
+      expect(redactText(`${key}=hunter2xyz9 tail`), key).toBe(`${key}=${REDACTED} tail`);
+      expect(redactText(`${key}: hunter2xyz9`), key).not.toContain("hunter2xyz9");
+    }
+    expect(redactText("author: Bob")).toBe("author: Bob");
+  });
+
   it("masks key=value assignments, URL userinfo and personal fields only when asked", () => {
     expect(redactText("password=hunter2 and api_key: abcd1234")).toBe(`password=${REDACTED} and api_key: ${REDACTED}`);
     expect(redactText('{"token": "abcdef"}')).toContain(REDACTED);

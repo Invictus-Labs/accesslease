@@ -27,7 +27,7 @@ const PATTERNS: Array<[RegExp, string | ((match: string, ...groups: string[]) =>
   [/\b[A-Z0-9]+(?:_[A-Z0-9]+)*_(?:SECRET|TOKEN|PASSWORD|API_KEY)(?:_[A-Za-z0-9]+)+\b/g, REDACTED],
   // key=value and key: value for credential-like keys; the value runs to whitespace, a quote, a comma or a semicolon
   [
-    /\b((?:pass(?:word|wd)?|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|credential|authorization|private[_-]?key)[\w-]*)(["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s"',;]+)/gi,
+    /\b([\w-]*?(?:pass(?:word|wd)?|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|credential|authorization|private[_-]?key)[\w-]*)(["']?\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s"',;]+)/gi,
     (_m, key, sep) => `${key}${sep}${REDACTED}`,
   ],
 ];

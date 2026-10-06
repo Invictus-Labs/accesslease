@@ -68,6 +68,13 @@ describe("F-004: redaction covers token shapes and whole assignment values", () 
     expect(redactText("close TASK-1 for contractor-a")).toBe("close TASK-1 for contractor-a");
   });
 
+  it("redacts prefixed and suffixed credential keys (db_password=, access_token=, PGPASSWORD=)", () => {
+    for (const key of ["db_password", "DB_PASSWORD", "PGPASSWORD", "access_token", "refresh_token", "api_key_v2", "x-auth-token"]) {
+      expect(redactText(`${key}=hunter2xyz9 tail`), key).toBe(`${key}=${REDACTED} tail`);
+    }
+    expect(redactText("author: Bob")).toBe("author: Bob");
+  });
+
   it("keeps the existing credential patterns", () => {
     expect(redactText("postgres://admin:hunter2@localhost/db")).toBe(`postgres://${REDACTED}@localhost/db`);
     expect(redactText("Bearer abcdefghijklmnop")).toContain(REDACTED);

@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { describe, expect, it } from "vitest";
 import { PostgresRoleProvider } from "../../../src/connectors/postgres-role.js";
-import type { IssueRequest, GrantTarget, RevokeResult } from "../../../src/connectors/provider.js";
+import { ProviderUnavailableError, type IssueRequest, type GrantTarget, type RevokeResult } from "../../../src/connectors/provider.js";
 
 const deferred = () => {
   let resolve!: () => void;
@@ -124,6 +124,17 @@ describe("provider terminal fence (synthetic control-flow model)", () => {
     h.internals.revokeFenced = async () => ({ steps: [{ step: "terminate_sessions", ok: false }], sessionsTerminated: 0 });
     const result = await h.provider.revoke(h.target); expect(result.steps[0]?.ok).toBe(false);
     expect(h.role).toBe(true); expect(h.fence).toBeDefined();
+    await expect(h.provider.issue(h.request())).rejects.toMatchObject({ code: "grant_terminal" });
+    h.internals.revokeFenced = clean; await h.provider.revoke(h.target); expect(h.role).toBe(false);
+  });
+  it("keeps the committed fence when cleanup fails part-way with ProviderUnavailableError", async () => {
+    const h = harness(); await h.provider.issue(h.request());
+    const clean = h.internals.revokeFenced;
+    // Logins may already be blocked on another connection when a later cleanup step loses the provider.
+    h.internals.revokeFenced = async () => { throw new ProviderUnavailableError("provider_unavailable", "synthetic outage during cleanup"); };
+    await expect(h.provider.revoke(h.target)).rejects.toBeInstanceOf(ProviderUnavailableError);
+    expect(h.fence?.lease_id).toBe(h.target.leaseId);
+    // A delayed or stale issue must not re-enable the role while cleanup is unfinished.
     await expect(h.provider.issue(h.request())).rejects.toMatchObject({ code: "grant_terminal" });
     h.internals.revokeFenced = clean; await h.provider.revoke(h.target); expect(h.role).toBe(false);
   });

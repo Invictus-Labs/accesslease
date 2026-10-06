@@ -351,6 +351,39 @@ describe("postgres-role provider (REAL PostgreSQL 17, disposable cluster)", () =
     expect(await roleExists(issued.providerRef)).toBe(false);
   });
 
+  it("a resource database renamed after issuance: revoke still blocks logins, but without a fence never settles", async () => {
+    const original = `al_prov_${randomBytes(5).toString("hex")}`;
+    const renamed = `${original}_old`;
+    const maintenance = await adminClient("postgres");
+    await maintenance.query(`CREATE DATABASE ${original}`);
+    const setup = await adminClient(original);
+    await setup.query(await readFile(new URL("../../../provider-migrations/001_terminal_fences.sql", import.meta.url), "utf8"));
+    await setup.query("CREATE SCHEMA app");
+    await setup.query("CREATE TABLE app.orders (id int PRIMARY KEY, note text)");
+    await setup.end();
+    const leaseId = randomUUID();
+    let role: string | undefined;
+    try {
+      role = (await provider.issue(issueRequest(leaseId, { resource: original }))).providerRef;
+      createdRoles.add(role);
+      // A rename keeps the role's CONNECT and table grants on the database.
+      await maintenance.query(`ALTER DATABASE ${original} RENAME TO ${renamed}`);
+      const before = await login(role, SECRET, providerPort, renamed);
+      await before.end();
+      const revoked = await provider.revoke({ leaseId, resource: original });
+      expect(revoked.steps[0]).toMatchObject({ step: "terminal_fence", ok: false });
+      expect(revoked.steps.find((s) => s.step === "disable_login")).toMatchObject({ ok: true });
+      expect(revoked.steps.every((s) => s.ok)).toBe(false);
+      // The grantee can no longer log in to the renamed database, although its grants there could not be removed.
+      await expect(login(role, SECRET, providerPort, renamed)).rejects.toMatchObject({ code: "28000" });
+    } finally {
+      await maintenance.query(`DROP DATABASE IF EXISTS ${renamed} WITH (FORCE)`).catch(() => undefined);
+      await maintenance.query(`DROP DATABASE IF EXISTS ${original} WITH (FORCE)`).catch(() => undefined);
+      if (role) await maintenance.query(`DROP ROLE IF EXISTS "${role}"`).catch(() => undefined);
+      await maintenance.end();
+    }
+  });
+
   it("when sessions cannot be terminated the role is NOT dropped: it stays NOLOGIN and present so the lease is never verified (R-005)", async () => {
     const stubborn = new PostgresRoleProvider({ adminUrl: adminBase, allowlist: ["127.0.0.1"], terminateWaitMs: -1 });
     const leaseId = randomUUID();

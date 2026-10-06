@@ -212,6 +212,14 @@ if (haveDb) {
   skip("browser-e2e", "no throwaway PostgreSQL available");
 }
 
+// --- 5c. terminal-fence races on the throwaway provider cluster: real advisory locks, isolation and commit loss, which the
+// synthetic unit model can only assume. The harness refuses anything but the disposable loopback al_admin pair.
+if (haveDb) {
+  await step("provider-terminal-fence-pg17", "npx", ["vitest", "run", "--config", "vitest.provider-terminal-fence.config.ts"], { stepEnv: { ...dbEnv, ACCESSLEASE_TERMINAL_FENCE_LIVE_ACK: "disposable-pg17" } });
+} else {
+  skip("provider-terminal-fence-pg17", "no throwaway PostgreSQL available");
+}
+
 // --- 5a. the acceptance matrix is computed from this run's reports (a PASS cannot be typed by hand)
 if (haveDb && existsSync(join(workDir, "vitest.json"))) {
   const headSha = out("git", ["rev-parse", "HEAD"]) ?? "";
