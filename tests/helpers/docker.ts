@@ -33,6 +33,9 @@ export function pauseProvider(): void {
 }
 
 export function unpauseProvider(): void {
+  // Cleanup hooks call this unconditionally. Without a provider container (the Node 22 container run) pauseProvider throws
+  // before pausing anything, so there is nothing to unpause.
+  if (!process.env.ACCESSLEASE_TEST_PROVIDER_CONTAINER) return;
   const r = docker(["unpause", providerContainer()]);
   if (r.status !== 0 && !/not paused/i.test(r.stderr)) throw new Error(`docker unpause failed: ${r.stderr}`);
 }
