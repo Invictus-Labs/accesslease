@@ -115,6 +115,9 @@ describe("redaction (AC-09)", () => {
       expect(redactText(`${key}: hunter2xyz9`), key).not.toContain("hunter2xyz9");
     }
     expect(redactText("author: Bob")).toBe("author: Bob");
+    // Scope syntax is not an assignment: tables named after credential words stay grantable.
+    for (const scope of ["pg:app.secrets_vault:select", "pg:app.api_tokens:insert", "pg:auth.password_resets:update", "synthetic:secret-store:read"]) expect(redactText(scope), scope).toBe(scope);
+    expect(redactText("spring.datasource.password=hunter2xyz9")).toBe(`spring.datasource.password=${REDACTED}`);
   });
 
   it("masks key=value assignments, URL userinfo and personal fields only when asked", () => {

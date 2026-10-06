@@ -16,9 +16,23 @@ if (!db || !provider) {
   process.exit(1);
 }
 // The suites and their egress allowlists address the throwaway pair as 127.0.0.1. Inside the container a TCP relay listens on
-// the same loopback ports and forwards to the host, so the tests run unchanged instead of allowlisting a container-only host name.
-const ports = [...new Set([db, provider].map((u) => Number(new URL(u).port)))];
-const relay = `const net=require("net");for(const p of ${JSON.stringify(ports)})net.createServer((c)=>{const u=net.connect(p,"host.docker.internal");c.pipe(u).pipe(c);c.on("error",()=>u.destroy());u.on("error",()=>c.destroy());}).listen(p,"127.0.0.1");`;
+// the same loopback ports and forwards straight to the database containers on the Docker bridge network (container to
+// container, not through the host port forwarder, which dropped connections intermittently), so the tests run unchanged.
+const bridgeAddress = (container) => {
+  const r = spawnSync("docker", ["inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", container], { encoding: "utf8" });
+  const address = (r.stdout ?? "").trim().split(/\s+/)[0];
+  if (r.status !== 0 || !address) throw new Error(`runtime-check-node22: cannot resolve the bridge address of ${container}`);
+  return address;
+};
+const meta = process.env.ACCESSLEASE_TEST_META_CONTAINER;
+const prov = process.env.ACCESSLEASE_TEST_PROVIDER_CONTAINER;
+if (!meta || !prov) {
+  console.error("runtime-check-node22: ACCESSLEASE_TEST_META_CONTAINER and ACCESSLEASE_TEST_PROVIDER_CONTAINER are required (set by scripts/test-db.sh)");
+  process.exit(1);
+}
+const routes = { [Number(new URL(db).port)]: bridgeAddress(meta), [Number(new URL(provider).port)]: bridgeAddress(prov) };
+const ports = Object.keys(routes).map(Number);
+const relay = `const net=require("net");const routes=${JSON.stringify(routes)};for(const p of Object.keys(routes))net.createServer((c)=>{const u=net.connect(5432,routes[p]);c.setNoDelay(true);u.setNoDelay(true);c.pipe(u).pipe(c);c.on("error",()=>u.destroy());u.on("error",()=>c.destroy());}).listen(Number(p),"127.0.0.1");`;
 const waitRelay = `const net=require("net");const ports=${JSON.stringify(ports)};const t=Date.now();(function f(){Promise.all(ports.map((p)=>new Promise((ok,no)=>{const s=net.connect(p,"127.0.0.1",()=>{s.end();ok();});s.on("error",no);}))).then(()=>process.exit(0),()=>Date.now()-t>10000?process.exit(1):setTimeout(f,100));})();`;
 // Tests that need the Docker socket (provider pause, container exec for backup/restore, an internal Docker network).
 const DOCKER_ONLY = [
@@ -62,7 +76,6 @@ const result = spawnSync(
   "docker",
   [
     "run", "--rm", "--name", name, "--label", "accesslease-test=1", "--memory", "2g",
-    "--add-host", "host.docker.internal:host-gateway",
     "-v", `${root}:/src:ro`,
     "-e", `ACCESSLEASE_TEST_DATABASE_URL=${db}`,
     "-e", `ACCESSLEASE_TEST_PROVIDER_DATABASE_URL=${provider}`,

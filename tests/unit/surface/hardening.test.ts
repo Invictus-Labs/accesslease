@@ -73,6 +73,7 @@ describe("F-004: redaction covers token shapes and whole assignment values", () 
       expect(redactText(`${key}=hunter2xyz9 tail`), key).toBe(`${key}=${REDACTED} tail`);
     }
     expect(redactText("author: Bob")).toBe("author: Bob");
+    for (const scope of ["pg:app.secrets_vault:select", "pg:app.api_tokens:insert"]) expect(redactText(scope), scope).toBe(scope);
   });
 
   it("keeps the existing credential patterns", () => {
