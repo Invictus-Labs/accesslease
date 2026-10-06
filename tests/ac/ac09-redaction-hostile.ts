@@ -35,6 +35,13 @@ export function redactionAndHostileInput(): void {
     await root.connect();
     await root.query(`CREATE ROLE ${target.rolePrefix}svc SUPERUSER LOGIN PASSWORD '${adminPassword}'`);
     await root.end();
+    // The connector requires the control objects to be owned by the administrator it connects as (docs/runbook/provider-control.md).
+    // freshProviderTarget provisioned them as the cluster admin, so hand both objects to the dedicated service role.
+    const owner = new pg.Client({ connectionString: target.adminUrl });
+    await owner.connect();
+    await owner.query(`ALTER SCHEMA accesslease_control OWNER TO ${target.rolePrefix}svc`);
+    await owner.query(`ALTER TABLE accesslease_control.terminal_fences OWNER TO ${target.rolePrefix}svc`);
+    await owner.end();
     const url = new URL(withDatabase(providerAdminUrl(), "postgres"));
     url.username = `${target.rolePrefix}svc`;
     url.password = adminPassword;

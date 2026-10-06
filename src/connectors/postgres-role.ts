@@ -365,6 +365,23 @@ export class PostgresRoleProvider implements Provider {
   async revoke(target: GrantTarget): Promise<RevokeResult> {
     // The durable terminal record commits even when cleanup is partial. A later retry can finish cleanup,
     // but no delayed issue (including after restart or restored stale metadata) can resurrect this role.
+    try {
+      return await this.revokeWithFence(target);
+    } catch (error) {
+      if (!(error instanceof ProviderRejectedError) || error.code !== "database_missing") throw error;
+      // The server definitively answered that the resource database does not exist, so no fence can be written there and
+      // no issue can commit there. Settle only when the cluster-wide role is also absent; a surviving role (database dropped
+      // after issuance) has no fence and stays unconfirmed. Residual risk: the same database is later created and provisioned
+      // and stale metadata replays an issue for this lease (docs/contracts/provider.md, "Terminal issuance barrier").
+      const present = await this.withAdmin(null, async (client) =>
+        (await client.query("SELECT 1 FROM pg_roles WHERE rolname = $1", [roleNameFor(target.leaseId)])).rows.length > 0,
+      );
+      if (present) throw error;
+      return { steps: [{ step: "resource_database_absent", ok: true }, { step: "role_absent", ok: true }], sessionsTerminated: 0 };
+    }
+  }
+
+  private async revokeWithFence(target: GrantTarget): Promise<RevokeResult> {
     return this.withAdmin(target.resource, async (client) => {
       // Do not inherit REPEATABLE READ: the fence read after a waited lock needs the latest committed row.
       await client.query("BEGIN ISOLATION LEVEL READ COMMITTED");
