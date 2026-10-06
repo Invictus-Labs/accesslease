@@ -9,7 +9,7 @@ export const REDACTED = "[redacted]";
 
 const PATTERNS: Array<[RegExp, string | ((match: string, ...groups: string[]) => string)]> = [
   // scheme://user:password@host  -> keep scheme and host
-  [/(?<![a-z0-9+.-])([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, `$1${REDACTED}@`],
+  [/(?<![a-z0-9+.-])([+.-]*[a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, `$1${REDACTED}@`],
   // PEM blocks
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g, REDACTED],
   // Authorization / bearer tokens
@@ -26,11 +26,14 @@ const PATTERNS: Array<[RegExp, string | ((match: string, ...groups: string[]) =>
   [/(?<![A-Za-z0-9_-])(?=[A-Za-z0-9_-]*?(?:planted|canary|fakesecret|fake[-_]secret|fake[-_]token|fake[-_]key))[A-Za-z0-9_-]+/gi, REDACTED],
   [/\b[A-Z0-9]+(?:_[A-Z0-9]+)*_(?:SECRET|TOKEN|PASSWORD|API_KEY)(?:_[A-Za-z0-9]+)+\b/g, REDACTED],
   // key=value and key: value for credential-like keys (prefixed and suffixed too, matched once per key token so the scan
-  // stays linear); the value runs to whitespace, a quote, a comma or a semicolon; a bare scope privilege after ":" is kept
+  // stays linear); the value runs to whitespace, a quote, a comma or a semicolon, and quoted values honour backslash escapes.
+  // The first alternative keeps a scope such as pg:app.secrets_vault:select (same rule as src/lib/redact.ts).
   [
-    /(?<![\w-])((?=[\w-]*?(?:pass(?:word|wd)?|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|credential|authorization|private[_-]?key))[\w-]+)(["']?(?:\s*=\s*|\s*:\s*(?!(?:select|insert|update|read|write)(?![^\s"',;]))))("[^"]*"|'[^']*'|[^\s"',;]+)/gi,
-    (_m, key, sep) => `${key}${sep}${REDACTED}`,
+    /([.:])((?=[\w-]*?(?:pass(?:word|wd)?|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|credential|authorization|private[_-]?key))[\w-]+:)((?:select|insert|update|read|write)(?=[\s"')\]}]|$|[.,;](?=\s|$)|[,;](?=[a-z][\w.-]*:)))|(^|[^\w-])((?=[\w-]*?(?:pass(?:word|wd)?|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|client[_-]?secret|credential|authorization|private[_-]?key))[\w-]+)(["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"',;]+)/gi,
+    (match, _scopeBefore, _scopeKey, _privilege, before, key, sep) => (before === undefined ? match : `${before}${key}${sep}${REDACTED}`),
   ],
+  // a key already replaced by an earlier pattern (AWS_SECRET_ACCESS_KEY -> [redacted]) still assigns a secret value
+  [/(\[redacted\]["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"',;]+)/g, `$1${REDACTED}`],
 ];
 
 export function redactText(value: string): string {

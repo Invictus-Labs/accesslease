@@ -77,6 +77,16 @@ describe("F-004: redaction covers token shapes and whole assignment values", () 
     for (const text of ["password=select-Tr0ub4dor", "access_token=read.only.k3y9x", "secret: write-once-v4lue", "password=select"]) expect(redactText(text), text).toContain(REDACTED);
   });
 
+  it("treats only real scope syntax as a scope, honours escaped quotes and keeps punctuation before a URL scheme", () => {
+    for (const text of ["password: select", "db_password:read", "token: read"]) expect(redactText(text), text).toContain(REDACTED);
+    expect(redactText('{"password":"ab\\"cd"}')).toBe(`{"password":${REDACTED}}`);
+    for (const text of ["-https://u:pw9x@h/x", ".https://u:pw9x@h/x"]) expect(redactText(text), text).not.toContain("pw9x");
+    expect(redactText("grant pg:app.secrets_vault:select, then stop")).toBe("grant pg:app.secrets_vault:select, then stop");
+    for (const text of ["pg:app.secrets_vault:select,pg:app.api_tokens:insert", '{"scopes":["pg:app.secrets_vault:select"]}', "(pg:app.secrets_vault:select)"]) expect(redactText(text), text).toBe(text);
+    expect(redactText("pg:a.b_token:select,secret:x9y8z7")).not.toContain("x9y8z7");
+    for (const text of ["AWS_SECRET_ACCESS_KEY=Zq9xV4lu3k", '"AWS_SECRET_ACCESS_KEY":"Zq9xV4lu3k"', "STRIPE_SECRET_KEY: Zq9xV4lu3k"]) expect(redactText(text), text).not.toContain("Zq9xV4lu3k");
+  });
+
   it("scans long unbroken input in linear time (no backtracking blow-up in the key pattern)", () => {
     // About 300 KB of key-like text without a separator: the earlier lazy-prefix pattern took several seconds here.
     for (const text of ["password_".repeat(33_000) + "x", "tokentoken".repeat(30_000) + "=", "a_".repeat(150_000), "token-".repeat(50_000) + "!", "secret-".repeat(43_000) + "=", "canary-".repeat(43_000)]) {

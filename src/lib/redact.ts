@@ -27,13 +27,17 @@ const PATTERNS: RegExp[] = [
   /\b[A-Z0-9]+(?:_[A-Z0-9]+)*_(?:SECRET|TOKEN|PASSWORD|API_KEY)(?:_[A-Za-z0-9]+)+\b/g,
 ];
 
-/** `password=hunter2`, `db_password=x`, `"api_key": "abc"`, `access_token: abc` inside free text (prefixed and suffixed keys too). Only a
- * colon followed by nothing but a scope privilege is not an assignment, so `pg:app.secrets_vault:select` stays a valid scope
- * while `password=select…` and `token: read.only…` are still redacted. A match starts only at the beginning of a
- * key token and checks the credential word inside it, so the scan stays linear on long unbroken input. */
+/** `password=hunter2`, `db_password=x`, `"api_key": "abc"`, `access_token: abc` inside free text (prefixed and suffixed keys too).
+ * The first alternative is a scope such as `pg:app.secrets_vault:select` or `synthetic:secret-store:read`: the key token follows
+ * `.` or `:`, a bare `:` joins it to a privilege that ends the token (or ends a scope in a list), and only that privilege is
+ * consumed, so a scope list is still scanned. Everything else is the second alternative and is redacted, including
+ * `password: select`. A match starts only at the beginning of a key token, so the scan stays linear on long unbroken input;
+ * quoted values honour backslash escapes. */
 const ASSIGNMENT =
-  /(?<![\w-])((?=[\w-]*?(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|credential|private[_-]?key|access[_-]?key|client[_-]?secret))[\w-]+["']?(?:\s*=\s*|\s*:\s*(?!(?:select|insert|update|read|write)(?!\S))))(?:"[^"]*"|'[^']*'|\S+)/gi;
-const URL_USERINFO = /((?<![a-z0-9+.-])[a-z][a-z0-9+.-]*:\/\/[^\s/:@]+:)([^\s/@]+)(@)/gi;
+  /([.:])((?=[\w-]*?(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|credential|private[_-]?key|access[_-]?key|client[_-]?secret))[\w-]+:)((?:select|insert|update|read|write)(?=[\s"')\]}]|$|[.,;](?=\s|$)|[,;](?=[a-z][\w.-]*:)))|(^|[^\w-])((?=[\w-]*?(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|credential|private[_-]?key|access[_-]?key|client[_-]?secret))[\w-]+["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\S+)/gi;
+/** A key already replaced by an earlier pattern (`AWS_SECRET_ACCESS_KEY` -> `[REDACTED]`) still assigns a secret value. */
+const REDACTED_KEY_ASSIGNMENT = /(\[REDACTED\]["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\S+)/g;
+const URL_USERINFO = /((?<![a-z0-9+.-])[+.-]*[a-z][a-z0-9+.-]*:\/\/[^\s/:@]+:)([^\s/@]+)(@)/gi;
 
 const registered = new Set<string>();
 const MAX_REGISTERED = 10_000;
@@ -66,7 +70,10 @@ export function redactText(text: string, options: RedactOptions = {}): string {
   }
   out = out.replace(URL_USERINFO, `$1${REDACTED}$3`);
   for (const pattern of PATTERNS) out = out.replace(pattern, REDACTED);
-  out = out.replace(ASSIGNMENT, (_m, key: string) => `${key}${REDACTED}`);
+  out = out.replace(ASSIGNMENT, (match: string, _scopeBefore, _scopeKey, _privilege, before: string | undefined, keySep: string) =>
+    before === undefined ? match : `${before}${keySep}${REDACTED}`,
+  );
+  out = out.replace(REDACTED_KEY_ASSIGNMENT, `$1${REDACTED}`);
   if (options.personal) out = out.replace(EMAIL, "[REDACTED_EMAIL]");
   return out;
 }
