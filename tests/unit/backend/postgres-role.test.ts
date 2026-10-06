@@ -351,7 +351,7 @@ describe("postgres-role provider (REAL PostgreSQL 17, disposable cluster)", () =
     expect(await roleExists(issued.providerRef)).toBe(false);
   });
 
-  it("a resource database renamed after issuance: revoke still blocks logins, but without a fence never settles", async () => {
+  it("a resource database renamed after issuance: revoke still blocks logins, and without a fence that attempt never settles", async () => {
     const original = `al_prov_${randomBytes(5).toString("hex")}`;
     const renamed = `${original}_old`;
     const maintenance = await adminClient("postgres");

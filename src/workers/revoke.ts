@@ -72,7 +72,7 @@ export async function processRevoke(ctx: Ctx, job: Job): Promise<RevokeOutcome> 
   }
   // Verified needs independent introspection AND a denied probe, and no revocation step may have failed (a failed session termination
   // must never be hidden by a later drop of the role).
-  // Absence during an unfinished/failed revoke is not settled terminality: its fence may still roll back.
+  // Absence during an unfinished/failed revoke is not settled: cleanup may be partial, or no fence could be written (database missing).
   const verified = errCode === null && steps.length > 0 && look?.state === "absent" && probe === "denied" && steps.every((s) => s.ok);
   const result: RevocationResult = verified ? "verified" : errCode ? "provider_error" : "unverified";
   const verificationRef = `introspection:${look?.state ?? "error"}+probe:${probe}`;

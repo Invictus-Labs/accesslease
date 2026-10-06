@@ -19,9 +19,11 @@ if (!db || !provider) {
 // the same loopback ports and forwards straight to the database containers on the Docker bridge network (container to
 // container, not through the host port forwarder, which dropped connections intermittently), so the tests run unchanged.
 const bridgeAddress = (container) => {
-  const r = spawnSync("docker", ["inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", container], { encoding: "utf8" });
-  const address = (r.stdout ?? "").trim().split(/\s+/)[0];
-  if (r.status !== 0 || !address) throw new Error(`runtime-check-node22: cannot resolve the bridge address of ${container}`);
+  // Only the labelled throwaway test containers may be targeted (same rule as tests/helpers/docker.ts).
+  if (!/^al-[a-z0-9-]+$/.test(container)) throw new Error(`runtime-check-node22: refusing container "${container}": not an al- test container`);
+  const r = spawnSync("docker", ["inspect", "-f", '{{index .Config.Labels "accesslease-test"}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}', "--", container], { encoding: "utf8", timeout: 15_000 });
+  const [label, address] = (r.stdout ?? "").trim().split(/\s+/);
+  if (r.status !== 0 || label !== "1" || !address) throw new Error(`runtime-check-node22: cannot use ${container} (missing accesslease-test=1 label or bridge address)`);
   return address;
 };
 const meta = process.env.ACCESSLEASE_TEST_META_CONTAINER;

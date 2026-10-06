@@ -44,7 +44,7 @@ describe("revoke against a resource database that does not exist", () => {
     expect(String(h.roleQueries[0]?.[0])).toMatch(/^al_[0-9a-f]{24}$/);
   });
 
-  it("a surviving role (database renamed or dropped after issuance) is still disabled and dropped, but without a fence never settles", async () => {
+  it("a surviving role (database renamed or dropped after issuance) is still disabled and dropped, and without a fence that attempt never settles", async () => {
     const h = harness({ rolePresent: true });
     const result = await h.provider.revoke(h.target);
     // Cluster-wide cleanup ran: logins blocked, sessions terminated, role dropped.

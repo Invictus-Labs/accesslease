@@ -378,7 +378,8 @@ export class PostgresRoleProvider implements Provider {
       );
       if (!present) return { steps: [{ step: "resource_database_absent", ok: true }, { step: "role_absent", ok: true }], sessionsTerminated: 0 };
       // The role survives (for example the database was renamed after issuance): still block logins, end sessions and try
-      // to drop it cluster-wide. Without a fence the attempt can never verify, so the lease stays unconfirmed.
+      // to drop it cluster-wide. Without a fence this attempt can never verify. Once the role is gone, a later attempt takes the
+      // role-absent branch above and settles (the documented residual risk).
       const cleanup = await this.revokeFenced(target);
       return { steps: [{ step: "terminal_fence", ok: false, detail: "resource database does not exist; no fence written" }, ...cleanup.steps], sessionsTerminated: cleanup.sessionsTerminated };
     }

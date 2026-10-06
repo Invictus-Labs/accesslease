@@ -9,7 +9,7 @@
 export const REDACTED = "[REDACTED]";
 
 const SECRET_KEY = /(password|passwd|pwd|secret|token|api[_-]?key|apikey|cookie|authorization|credential|private[_-]?key|session|csrf)/i;
-const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const EMAIL = /(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 
 const PATTERNS: RegExp[] = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
@@ -23,15 +23,17 @@ const PATTERNS: RegExp[] = [
   /\bxox[abprs]-[A-Za-z0-9-]{10,}/g,
   /\bAIza[0-9A-Za-z_-]{30,}/g,
   // identifiers that announce themselves as fake/planted/canary secrets, e.g. PLANTED_SECRET_TOKEN_9f3a
-  /\b[A-Za-z0-9_-]*(?:planted|canary|fakesecret|fake[-_]secret|fake[-_]token|fake[-_]key)[A-Za-z0-9_-]*\b/gi,
+  /(?<![A-Za-z0-9_-])(?=[A-Za-z0-9_-]*?(?:planted|canary|fakesecret|fake[-_]secret|fake[-_]token|fake[-_]key))[A-Za-z0-9_-]+/gi,
   /\b[A-Z0-9]+(?:_[A-Z0-9]+)*_(?:SECRET|TOKEN|PASSWORD|API_KEY)(?:_[A-Za-z0-9]+)+\b/g,
 ];
 
-/** `password=hunter2`, `db_password=x`, `"api_key": "abc"`, `access_token: abc` inside free text (prefixed and suffixed keys too). A bare
- * scope privilege after the separator is not a value, so `pg:app.secrets_vault:select` stays a valid scope. */
+/** `password=hunter2`, `db_password=x`, `"api_key": "abc"`, `access_token: abc` inside free text (prefixed and suffixed keys too). Only a
+ * colon followed by nothing but a scope privilege is not an assignment, so `pg:app.secrets_vault:select` stays a valid scope
+ * while `password=select…` and `token: read.only…` are still redacted. A match starts only at the beginning of a
+ * key token and checks the credential word inside it, so the scan stays linear on long unbroken input. */
 const ASSIGNMENT =
-  /\b([\w-]*?(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|credential|private[_-]?key|access[_-]?key|client[_-]?secret)[\w-]*["']?\s*[:=]\s*)(?!(?:select|insert|update|read|write)\b)(?:"[^"]*"|'[^']*'|\S+)/gi;
-const URL_USERINFO = /(\b[a-z][a-z0-9+.-]*:\/\/[^\s/:@]+:)([^\s/@]+)(@)/gi;
+  /(?<![\w-])((?=[\w-]*?(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|authorization|credential|private[_-]?key|access[_-]?key|client[_-]?secret))[\w-]+["']?(?:\s*=\s*|\s*:\s*(?!(?:select|insert|update|read|write)(?!\S))))(?:"[^"]*"|'[^']*'|\S+)/gi;
+const URL_USERINFO = /((?<![a-z0-9+.-])[a-z][a-z0-9+.-]*:\/\/[^\s/:@]+:)([^\s/@]+)(@)/gi;
 
 const registered = new Set<string>();
 const MAX_REGISTERED = 10_000;

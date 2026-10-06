@@ -130,6 +130,7 @@ if (process.env.ACCESSLEASE_TEST_DATABASE_URL && process.env.ACCESSLEASE_TEST_PR
     ACCESSLEASE_TEST_DATABASE_URL: process.env.ACCESSLEASE_TEST_DATABASE_URL,
     ACCESSLEASE_TEST_PROVIDER_DATABASE_URL: process.env.ACCESSLEASE_TEST_PROVIDER_DATABASE_URL,
     ACCESSLEASE_TEST_PROVIDER_CONTAINER: process.env.ACCESSLEASE_TEST_PROVIDER_CONTAINER ?? "",
+    ACCESSLEASE_TEST_META_CONTAINER: process.env.ACCESSLEASE_TEST_META_CONTAINER ?? "",
   };
   steps.push({ name: "test-databases", required: true, status: "PASS", command: "reuse ACCESSLEASE_TEST_* from environment", exit_code: 0, started_at: new Date().toISOString(), duration_ms: 0, detail: "externally supplied disposable servers" });
 } else {

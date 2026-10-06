@@ -118,6 +118,17 @@ describe("redaction (AC-09)", () => {
     // Scope syntax is not an assignment: tables named after credential words stay grantable.
     for (const scope of ["pg:app.secrets_vault:select", "pg:app.api_tokens:insert", "pg:auth.password_resets:update", "synthetic:secret-store:read"]) expect(redactText(scope), scope).toBe(scope);
     expect(redactText("spring.datasource.password=hunter2xyz9")).toBe(`spring.datasource.password=${REDACTED}`);
+    // A value that merely starts with a privilege word, or follows "=", is still a secret.
+    for (const text of ["password=select-Tr0ub4dor", "access_token=read.only.k3y9x", "secret: write-once-v4lue", "password=select", "token=read"]) expect(redactText(text), text).toContain(REDACTED);
+  });
+
+  it("scans long unbroken input in linear time (no backtracking blow-up in the key pattern)", () => {
+    // About 300 KB of key-like text without a separator: the earlier lazy-prefix pattern took several seconds here.
+    for (const text of ["password_".repeat(33_000) + "x", "tokentoken".repeat(30_000) + "=", "a_".repeat(150_000), "token-".repeat(50_000) + "!", "secret-".repeat(43_000) + "=", "canary-".repeat(43_000), "a.".repeat(150_000) + "@", "x+".repeat(150_000) + "://"]) {
+      const started = performance.now();
+      redactText(text, { personal: true });
+      expect(performance.now() - started, `${text.slice(0, 12)}… x${text.length}`).toBeLessThan(1000);
+    }
   });
 
   it("masks key=value assignments, URL userinfo and personal fields only when asked", () => {
