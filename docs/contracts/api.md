@@ -158,10 +158,13 @@ manifest:{files:[{path, sha256, bytes}], file_count, total_bytes, manifest_hash}
   -> schema -> path safety (`bundle_unsafe_path`: absolute, `..`, backslash, drive letters, symlink-like names, odd characters)
   and file count <= 1000 (`bundle_too_many_files`) -> every file hash and the manifest (`bundle_hash_mismatch`,
   `bundle_manifest_mismatch`) -> internal references (`bundle_reference_broken`: ids inside a lease file must match its path and the
-  bundle workspace). Import then runs in **one transaction**: any failure leaves no imported rows. Importing the same
+  bundle workspace) -> redaction admission (`bundle_schema_invalid`: secret-bearing text, values or property names,
+  including nested extra members, must already be redacted). Verification rejects unredacted documents rather than changing
+  their bytes or hashes; unsupported-version and validation errors never echo secret material. Import then runs in **one transaction**: any failure leaves no imported rows. Importing the same
   `bundle_hash` again returns the existing receipt (`already_imported: true`).
 - Imported leases are read-only evidence (tables `evidence_imports`, `imported_leases`); they are never re-activated and the worker
-  never acts on them. Reads re-verify the stored document hash. A restored backup of the live database is separate (AC-13) and keeps
+  never acts on them. Reads re-verify the stored document hash and refuse unredacted secret-bearing documents with
+  `422 bundle_schema_invalid`; they do not rewrite historical evidence or claim a modified document has the original hash. A restored backup of the live database is separate (AC-13) and keeps
   all references because IDs and foreign keys are database-internal.
 - Bundles work offline; nothing in export/import/verify performs network I/O.
 

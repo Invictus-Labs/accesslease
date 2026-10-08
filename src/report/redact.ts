@@ -1,3 +1,5 @@
+import { redactDeep } from "../lib/redact.js";
+
 /**
  * Defence-in-depth redaction applied to every free-text value before it reaches a report or the CLI output.
  * The backend is the authority on what is stored; this makes sure a credential-shaped value that slipped
@@ -42,4 +44,28 @@ export function redactText(value: string): string {
     out = out.replace(pattern, replacement as never);
   }
   return out;
+}
+
+/** JSON uses the backend's recursive boundary plus the HTML report's text boundary.
+ * Redact secret-bearing member names too, retaining distinct members when their masked names collide.
+ * Numeric/boolean counts and uncertainty/completeness fields keep their original values.
+ */
+export function redactedReportJson(value: unknown): string {
+  return JSON.stringify(redactDeep(value), (_key: string, item: unknown) => {
+    if (typeof item === "string") return redactText(item);
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    const entries = Object.entries(item);
+    const occupied = new Set(entries.map(([key]) => key));
+    const nextSuffix = new Map<string, number>();
+    return Object.fromEntries(entries.map(([key, field]) => {
+      const masked = redactText(key);
+      if (masked === key) return [key, field];
+      let safeKey = masked;
+      let suffix = nextSuffix.get(masked) ?? 1;
+      while (occupied.has(safeKey)) safeKey = `${masked} (${suffix++})`;
+      nextSuffix.set(masked, suffix);
+      occupied.add(safeKey);
+      return [safeKey, field];
+    }));
+  }, 2);
 }

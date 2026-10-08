@@ -2,31 +2,67 @@
 // Negative control for the gate itself: a seeded mandatory failure must make (1) the real test runner exit non-zero and
 // (2) the release verdict RED. A passing control run must stay green. Exit 0 only when all three hold.
 import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { computeVerdict, parseMatrix } from "./lib/verdict.mjs";
 
 const root = resolve(import.meta.dirname, "..");
-const vitest = (seeded) =>
-  spawnSync("npx", ["vitest", "run", "tests/negative-controls/seeded-failure.test.ts"], {
+// A fresh private report per invocation prevents an earlier success/failure from certifying this run.
+const reports = mkdtempSync(join(tmpdir(), "al-seeded-proof-"));
+process.on("exit", () => rmSync(reports, { recursive: true, force: true }));
+const testFile = "tests/negative-controls/seeded-failure.test.ts";
+const describeTitle = "seeded mandatory failure (negative control)";
+const testTitle = "mandatory control stays green unless a failure is seeded";
+const fullName = `${describeTitle} ${testTitle}`;
+
+function vitest(seeded) {
+  const report = join(reports, seeded ? "seeded.json" : "clean.json");
+  const junit = join(reports, seeded ? "seeded.xml" : "clean.xml");
+  const result = spawnSync("npx", ["vitest", "run", testFile, "--reporter=json", "--reporter=junit", `--outputFile.json=${report}`, `--outputFile.junit=${junit}`], {
     cwd: root,
     encoding: "utf8",
+    timeout: 60_000,
+    maxBuffer: 4 * 1024 * 1024,
     env: { ...process.env, ACCESSLEASE_SEEDED_FAILURE: seeded ? "1" : "0" },
   });
+  const reject = () => {
+    // Do not print arbitrary runner output or report values into a successful release receipt.
+    console.error(`seeded-failure control: ${seeded ? "seeded assertion failure" : "clean assertion pass"} was not proven by this runner invocation`);
+    process.exit(1);
+  };
+  if (result.error || result.signal !== null || result.status !== (seeded ? 1 : 0)) reject();
+  let data;
+  let xml;
+  try { data = JSON.parse(readFileSync(report, "utf8")); xml = readFileSync(junit, "utf8"); } catch { reject(); }
+  // Pinned Vitest JSON omits unhandled-error totals. Its JUnit root includes them separately from assertion failures.
+  const rootTag = /^\s*(?:<\?xml[^?]*\?>\s*)?<testsuites\b([^>]*)>/.exec(xml);
+  const attribute = (name, value) => new RegExp(`(?:^|\\s)${name}="${value}"(?:\\s|$)`).test(rootTag?.[1] ?? "");
+  if (!rootTag || !/<\/testsuites>\s*$/.test(xml) || !attribute("errors", "0") || !attribute("tests", "1") ||
+      !attribute("failures", seeded ? "1" : "0")) reject();
+  if (!data || data.success !== !seeded || data.numTotalTests !== 1 || data.numPassedTests !== (seeded ? 0 : 1) ||
+      data.numFailedTests !== (seeded ? 1 : 0) || data.numPendingTests !== 0 || data.numTodoTests !== 0 ||
+      (data.numRuntimeErrorTestSuites !== undefined && data.numRuntimeErrorTestSuites !== 0) ||
+      (data.unhandledErrors !== undefined && (!Array.isArray(data.unhandledErrors) || data.unhandledErrors.length !== 0)) ||
+      !Array.isArray(data.testResults) || data.testResults.length !== 1) reject();
+  const suite = data.testResults[0];
+  if (!suite || suite.name !== resolve(root, testFile) || suite.status !== (seeded ? "failed" : "passed") || suite.message !== "" ||
+      !Array.isArray(suite.assertionResults) || suite.assertionResults.length !== 1) reject();
+  const assertion = suite.assertionResults[0];
+  if (!assertion || assertion.fullName !== fullName || assertion.title !== testTitle ||
+      !Array.isArray(assertion.ancestorTitles) || assertion.ancestorTitles.length !== 1 || assertion.ancestorTitles[0] !== describeTitle ||
+      assertion.status !== (seeded ? "failed" : "passed") || !Array.isArray(assertion.failureMessages)) reject();
+  if (seeded) {
+    if (assertion.failureMessages.length !== 1 || typeof assertion.failureMessages[0] !== "string" ||
+        !/^AssertionError: expected ['"]seeded-failure-active['"] to be ['"]no-failure-seeded['"]/.test(assertion.failureMessages[0])) reject();
+  } else if (assertion.failureMessages.length !== 0) reject();
+  return result;
+}
 
 const clean = vitest(false);
-if (clean.status !== 0) {
-  console.error("seeded-failure control: the un-seeded run must pass");
-  console.error(clean.stdout, clean.stderr);
-  process.exit(1);
-}
 console.log("seeded-failure control: un-seeded run passes (exit 0)");
-
 const seeded = vitest(true);
-if (seeded.status === 0) {
-  console.error("seeded-failure control: a seeded mandatory failure did NOT fail the test runner");
-  process.exit(1);
-}
-console.log(`seeded-failure control: seeded run fails as required (exit ${seeded.status})`);
+console.log("seeded-failure control: intended named assertion fails as required (exit 1)");
 
 // Feed the seeded outcome through the real verdict function with an otherwise perfect matrix.
 const perfect = parseMatrix(

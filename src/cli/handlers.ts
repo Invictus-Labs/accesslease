@@ -6,6 +6,7 @@ import { assetPath } from "../report/assets.js";
 import { parseReportData } from "../report/data-schema.js";
 import { reportModelFromData, unresolvedInReport } from "../report/from-data.js";
 import { renderReport } from "../report/render.js";
+import { redactedReportJson } from "../report/redact.js";
 import type { ReportData } from "../services/contract.js";
 import { boolFlag, intFlag, stringFlag, type FlagValues } from "./args.js";
 import { CliError, EXIT, finalExitCode, UsageError } from "./exit.js";
@@ -191,7 +192,7 @@ export async function report({ flags, env, io, deps }: HandlerInput): Promise<Ou
   const emit = (data: ReportData): Outcome => {
     // Count from the leases first: a report that disagrees with itself is refused before anything is written.
     const unresolved = unresolvedInReport(data);
-    const body = format === "json" ? `${JSON.stringify(data, null, 2)}\n` : renderReport(reportModelFromData(data));
+    const body = format === "json" ? `${redactedReportJson(data)}\n` : renderReport(reportModelFromData(data));
     if (out) {
       const path = writeOwnerOnlyFile(out, body);
       io.out(`report written to ${path} (mode 0600)`);
