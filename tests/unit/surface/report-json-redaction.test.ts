@@ -1,6 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runCommand, type CommandDeps } from "../../../src/commands";
 import { capture, lease, reportData } from "./fakes";
@@ -91,5 +93,69 @@ describe("SECURITY-003: offline JSON reports share the report redaction boundary
     expect(parsed.truncated).toBe(data.truncated);
     expect(parsed.workspace_total).toBe(data.workspace_total);
     expect(r.stderr).toContain("this is not success");
+  });
+});
+
+describe("SECURITY-005: CLI diagnostic boundary redacts reflected input", () => {
+  const validationSecret = "PLANTED_SECRET_TOKEN_cli_validation_04";
+  const invalidData = (key: string) => {
+    const data = reportData();
+    return { ...data, summary: { ...data.summary, by_state: { ...data.summary.by_state, [key]: "invalid" } } };
+  };
+
+  it("redacts an invalid report record key while preserving the validation error and exit 2", async () => {
+    const input = join(dir, "invalid.json");
+    const output = join(dir, "rejected.json");
+    writeFileSync(input, JSON.stringify(invalidData(validationSecret)));
+    const cap = capture();
+    const code = await runCommand(["report", "--from-data", input, "--format", "json", "--out", output], {}, cap.io, noServices);
+    expect(code).toBe(2);
+    expect(cap.out).toEqual([]);
+    expect(existsSync(output)).toBe(false);
+    expect(cap.err.join("\n")).not.toContain(validationSecret);
+    expect(cap.err.join("\n")).toContain("invalid report data at summary.by_state.");
+    expect(cap.err.join("\n")).toMatch(/redacted/i);
+    expect(cap.err.join("\n")).toContain("expected number");
+  });
+
+  it.each([[validationSecret], ["help", validationSecret]])("redacts an unknown command or help topic: %j", async (...argv) => {
+    const cap = capture();
+    const code = await runCommand(argv, {}, cap.io, noServices);
+    expect(code).toBe(2);
+    expect(cap.out).toEqual([]);
+    expect(cap.err.join("\n")).not.toContain(validationSecret);
+    expect(cap.err.join("\n")).toMatch(/unknown command \[redacted\]/i);
+    expect(cap.err.join("\n")).toContain("usage: accesslease <command> [options]");
+  });
+
+  it("redacts the same invalid report diagnostic through the packaged CLI subprocess", () => {
+    const input = join(dir, "packaged-invalid.json");
+    writeFileSync(input, JSON.stringify(invalidData(validationSecret)));
+    const cli = fileURLToPath(new URL("../../../dist/src/cli.js", import.meta.url));
+    expect(existsSync(cli), "build the packaged server CLI before this test").toBe(true);
+    const result = spawnSync(process.execPath, [cli, "report", "--from-data", input, "--format", "json"], { encoding: "utf8", timeout: 10_000, env: { PATH: process.env.PATH } });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).not.toContain(validationSecret);
+    expect(result.stderr).toContain("invalid report data at summary.by_state.");
+    expect(result.stderr).toMatch(/redacted/i);
+  });
+
+  it("preserves a benign unknown-command diagnostic and usage", async () => {
+    const cap = capture();
+    expect(await runCommand(["ordinary-missing-command"], {}, cap.io, noServices)).toBe(2);
+    expect(cap.err.join("\n")).toContain("unknown command ordinary-missing-command\nusage: accesslease <command> [options]");
+    expect(cap.err.join("\n")).not.toContain("[redacted]");
+  });
+
+  it("preserves a benign invalid report path and validation meaning", async () => {
+    const input = join(dir, "ordinary-invalid.json");
+    writeFileSync(input, JSON.stringify(invalidData("ordinary_state")));
+    const cap = capture();
+    expect(await runCommand(["report", "--from-data", input, "--format", "json"], {}, cap.io, noServices)).toBe(2);
+    expect(cap.err.join("\n")).toContain("invalid report data at summary.by_state.ordinary_state");
+    expect(cap.err.join("\n")).toContain("expected number");
+    expect(cap.err.join("\n")).not.toMatch(/redacted/i);
   });
 });
