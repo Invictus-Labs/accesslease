@@ -137,30 +137,31 @@ try {
     expect((await api(cookie, csrf, "POST", `/leases/${leaseId}/approve`, { plan_hash: lease.body.plan_hash })).status === 202, "approve failed");
     const stateOf = async (lid) => (await api(cookie, null, "GET", `/leases/${lid}`)).body;
     let detail;
-    for (let i = 0; i < 40 && detail?.state !== "ACTIVE"; i += 1) {
+    for (let i = 0; i < 40 && detail?.state !== "active"; i += 1) {
       await sleep(1000);
       detail = await stateOf(leaseId);
     }
-    expect(detail.state === "ACTIVE", `lease did not become ACTIVE (state ${detail?.state})`);
+    expect(detail.state === "active", `lease did not become ACTIVE (state ${detail?.state})`);
     expect((await api(cookie, csrf, "POST", `/leases/${leaseId}/credential`, {})).status === 200, "first credential retrieval failed");
     expect((await api(cookie, csrf, "POST", `/leases/${leaseId}/credential`, {})).status === 409, "second credential retrieval must be 409");
-    for (let i = 0; i < 120 && detail?.state !== "REVOKED_VERIFIED"; i += 1) {
+    for (let i = 0; i < 120 && detail?.state !== "revoked_verified"; i += 1) {
       await sleep(1000);
       detail = await stateOf(leaseId);
     }
-    expect(detail.state === "REVOKED_VERIFIED" && detail.close_reason === "expired", `expiry did not end verified (state ${detail?.state}, reason ${detail?.close_reason})`);
+    expect(detail.state === "revoked_verified" && detail.close_reason === "expired", `expiry did not end verified (state ${detail?.state}, reason ${detail?.close_reason})`);
     note(/introspection:absent\+probe:denied/.test(detail.attempts.at(-1)?.verification_ref ?? ""), `smoke.md expects verification reference introspection:absent+probe:denied; got ${detail.attempts.at(-1)?.verification_ref}`);
     entry.notes.push(`expired lease verified after ${detail.attempts.length} attempt(s)`);
     const second = await api(cookie, csrf, "POST", "/leases", { task_ref: "SMOKE-2", subject_ref: "contractor-b", resource_ref: "reporting", scopes: ["synthetic:reporting:read"], expires_at: new Date(Date.now() + 30 * 60_000).toISOString() });
     await api(cookie, csrf, "POST", `/leases/${second.body.id}/approve`, { plan_hash: second.body.plan_hash });
-    for (let i = 0; i < 40 && (await stateOf(second.body.id)).state !== "ACTIVE"; i += 1) await sleep(1000);
+    for (let i = 0; i < 40 && (await stateOf(second.body.id)).state !== "active"; i += 1) await sleep(1000);
+    expect((await stateOf(second.body.id)).state === "active", "second lease did not become ACTIVE before explicit revoke");
     await api(cookie, csrf, "POST", `/leases/${second.body.id}/revoke`, { reason: "smoke explicit revoke" });
     let d2;
-    for (let i = 0; i < 40 && d2?.state !== "REVOKED_VERIFIED"; i += 1) {
+    for (let i = 0; i < 40 && d2?.state !== "revoked_verified"; i += 1) {
       await sleep(1000);
       d2 = await stateOf(second.body.id);
     }
-    expect(d2.state === "REVOKED_VERIFIED" && d2.close_reason === "operator_revoked", `explicit revoke state ${d2?.state}`);
+    expect(d2.state === "revoked_verified" && d2.close_reason === "operator_revoked", `explicit revoke state ${d2?.state}`);
     const viewer = await api(cookie, csrf, "POST", "/members", { email: "viewer@example.test", password: "a-long-synthetic-password", role: "viewer" });
     expect(viewer.status === 201, `adding a viewer failed (${viewer.status})`);
     const v = await api(null, null, "POST", "/auth/login", { email: "viewer@example.test", password: "a-long-synthetic-password" });

@@ -1,5 +1,6 @@
 import type { ErrorCode } from "./domain/types.js";
 import { ERROR_CODES } from "./domain/types.js";
+import { redactText } from "./lib/redact.js";
 
 /** API error with the PRD error envelope `{error:{code,message,request_id}}`. */
 export class AppError extends Error {
@@ -9,7 +10,7 @@ export class AppError extends Error {
     message: string,
     readonly headers: Record<string, string> = {},
   ) {
-    super(message);
+    super(redactText(message));
     this.name = "AppError";
   }
 }

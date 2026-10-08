@@ -247,7 +247,7 @@ if (out("sh", ["-c", "command -v sanitize-content"])) {
 }
 
 // --- 7. packaged CLI demo, offline by construction ---------------------------------------------------------------------
-await step("cli-demo-offline", "node", ["scripts/demo-smoke.mjs", "--out", join(workDir, "demo")]);
+await step("cli-demo-offline", "node", ["scripts/demo-smoke.mjs", "--out", join(workDir, "demo")], { stepEnv: dbEnv });
 
 // --- 8. optional benchmark ---------------------------------------------------------------------------------------------
 if (benchmark) await step("core-benchmark-experiment", "node", ["scripts/benchmark-core.mjs", "--out", join(workDir, "benchmark.json")], { stepEnv: dbEnv, required: false });

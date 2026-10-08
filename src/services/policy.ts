@@ -22,7 +22,10 @@ export interface PolicyRules {
 
 export const policyHashOf = (rules: PolicyRules): string =>
   contentHash({
-    ...rules,
+    default_ttl_seconds: rules.default_ttl_seconds,
+    max_ttl_seconds: rules.max_ttl_seconds,
+    min_ttl_seconds: rules.min_ttl_seconds,
+    approval_ttl_seconds: rules.approval_ttl_seconds,
     scope_allow_prefixes: [...rules.scope_allow_prefixes].sort(),
     scope_deny_prefixes: [...rules.scope_deny_prefixes].sort(),
   });

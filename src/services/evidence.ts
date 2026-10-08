@@ -18,7 +18,7 @@ import {
   type ProviderLabel,
 } from "../domain/types.js";
 import { AppError, fail, notFound } from "../errors.js";
-import { redactDeep } from "../lib/redact.js";
+import { containsSecret, redactDeep, redactText } from "../lib/redact.js";
 import type { ExportOptions, ExportResult, VerifyBundleOptions } from "./contract.js";
 import { isUuid } from "./auth.js";
 import { toEnvelope } from "./events.js";
@@ -41,11 +41,21 @@ class BundleError extends Error {
     readonly code: BundleErrorCode,
     message: string,
   ) {
-    super(message);
+    super(redactText(message));
   }
 }
 
 const bytesOf = (doc: unknown) => Buffer.byteLength(canonicalJson(doc));
+
+// redactDeep deliberately preserves member names; imported extras need that check too.
+function hasSecretMemberName(value: unknown): boolean {
+  if (value === null || typeof value !== "object") return false;
+  return Object.entries(value).some(([key, child]) => containsSecret(key) || hasSecretMemberName(child));
+}
+
+function hasUnredactedEvidence(value: unknown): boolean {
+  return hasSecretMemberName(value) || canonicalJson(redactDeep(value)) !== canonicalJson(value);
+}
 
 /** Redacted evidence documents for the given leases, built with a fixed number of queries (bulk load). */
 async function leaseEvidenceDocs(db: Queryable, workspaceId: string, ids: string[]): Promise<Map<string, Record<string, unknown>>> {
@@ -167,7 +177,7 @@ function parseAndVerifyUnguarded(bytes: Uint8Array, options: VerifyBundleOptions
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new BundleError("bundle_malformed", "bundle must be a JSON object");
   const root = raw as Record<string, unknown>;
   if (root.kind !== BUNDLE_KIND) throw new BundleError("bundle_malformed", "not an AccessLease evidence bundle");
-  if (root.schema_version !== BUNDLE_SCHEMA_VERSION) throw new BundleError("bundle_unsupported_version", `unsupported bundle schema_version ${JSON.stringify(root.schema_version)}`);
+  if (root.schema_version !== BUNDLE_SCHEMA_VERSION) throw new BundleError("bundle_unsupported_version", "unsupported bundle schema_version");
   const parsed = EvidenceBundleSchema.safeParse(raw);
   if (!parsed.success) throw new BundleError("bundle_schema_invalid", `bundle does not match its schema at ${parsed.error.issues[0]?.path.join(".") || "root"}`);
   const bundle = raw as EvidenceBundle;
@@ -219,6 +229,8 @@ function parseAndVerifyUnguarded(bytes: Uint8Array, options: VerifyBundleOptions
   if (JSON.stringify([...leaseDocs.keys()].sort()) !== JSON.stringify([...summary.data.lease_ids].sort())) {
     throw new BundleError("bundle_reference_broken", "summary.json does not list exactly the bundled leases");
   }
+  // Reject rather than rewrite: hashes continue to identify the exact original documents.
+  if (hasUnredactedEvidence(bundle)) throw new BundleError("bundle_schema_invalid", "bundle contains unredacted secret-bearing content");
   return { bundle, leaseDocs };
 }
 
@@ -317,6 +329,7 @@ export async function getImportedLease(ctx: Ctx, principal: Principal, importId:
   ).rows[0];
   if (!row) throw notFound();
   if (contentHash(row.doc) !== row.doc_hash) throw fail("bundle_hash_mismatch", "stored evidence no longer matches its recorded hash");
+  if (hasUnredactedEvidence(row.doc)) throw fail("bundle_schema_invalid", "stored evidence contains unredacted secret-bearing content");
   return { import_id: importId, lease_id: leaseId, hash_verified: true, evidence: row.doc };
 }
 

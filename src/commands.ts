@@ -5,6 +5,7 @@ import * as h from "./cli/handlers.js";
 import { type CommandDeps, type Io, type Outcome } from "./cli/runtime.js";
 import { COMMAND_NAMES, COMMAND_SPECS } from "./cli/specs.js";
 import { assetPath } from "./report/assets.js";
+import { redactText } from "./report/redact.js";
 
 export type { CommandDeps, Io, Outcome } from "./cli/runtime.js";
 
@@ -54,6 +55,8 @@ function version(): string {
  * Expected failures never throw out of here: they print one line to stderr and map to exit 2, 3 or 1.
  */
 export async function runCommand(argv: string[], env: NodeJS.ProcessEnv, io: Io, deps: CommandDeps = {}): Promise<Outcome> {
+  const originalIo = io;
+  io = { ...io, err: (line: string) => originalIo.err(redactText(line)) };
   const [command, ...rest] = argv;
   if (!command) {
     io.err(usage());

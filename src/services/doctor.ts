@@ -62,14 +62,18 @@ export async function runDoctor(ctx: Ctx): Promise<DoctorReport> {
           message: facts.superuser ? "admin role is a superuser" : `createrole=${facts.createRole} pg_signal_backend=${facts.canSignal}`,
           hint: "the admin URL needs CREATEROLE and pg_signal_backend (or superuser) on the disposable target cluster",
         });
-        if (dbOk && facts.systemIdentifier) {
+        {
           let local: string | null = null;
-          try {
-            local = (await ctx.db.query<{ id: string }>("SELECT system_identifier::text AS id FROM pg_control_system()")).rows[0]?.id ?? null;
-          } catch {
-            local = null;
+          if (dbOk) {
+            try {
+              local = (await ctx.db.query<{ id: string }>("SELECT system_identifier::text AS id FROM pg_control_system()")).rows[0]?.id ?? null;
+            } catch {
+              local = null;
+            }
           }
-          if (local && local === facts.systemIdentifier) {
+          if (!local || !facts.systemIdentifier) {
+            add({ name: "provider:separation", status: "unavailable", message: "cluster separation could not be verified", hint: "allow both database roles to read pg_control_system() and confirm the provider uses a separate disposable cluster" });
+          } else if (local === facts.systemIdentifier) {
             add({ name: "provider:separation", status: "fail", message: "the provider cluster IS the metadata cluster", hint: "ACCESSLEASE_PROVIDER_ADMIN_URL must point to a separate disposable cluster" });
           } else {
             add({ name: "provider:separation", status: "ok", message: "provider cluster is separate from the metadata cluster" });
