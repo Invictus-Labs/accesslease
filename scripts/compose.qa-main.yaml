@@ -1,0 +1,11 @@
+# QA override for the agent-run fresh-operator smoke: label everything accesslease-test=1 and publish the app on a RANDOM loopback port
+# so a drill never collides with anything else listening on the machine.
+services:
+  db:
+    labels:
+      accesslease-test: "1"
+  accesslease:
+    labels:
+      accesslease-test: "1"
+    ports: !override
+      - "127.0.0.1::8791"

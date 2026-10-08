@@ -1,0 +1,42 @@
+# Optional overlay: a throwaway, SEPARATE PostgreSQL cluster used as the real local provider (postgres-role).
+# AccessLease creates a short-lived role in it, verifies revocation by introspection and a denied-use probe,
+# and drops the role. This cluster is disposable: never point the overlay at a database you care about.
+#   docker compose -f compose.yaml -f compose.provider.yaml up --build
+# The cluster is on a fixed internal subnet so the outbound allowlist can name exactly that range.
+services:
+  provider-db:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_USER: provider_admin
+      POSTGRES_DB: reporting
+      POSTGRES_PASSWORD: ${PROVIDER_DB_PASSWORD:?set PROVIDER_DB_PASSWORD in .env}
+    # No published port: only the app and the grantee-facing connection below can reach it.
+    networks:
+      accesslease:
+        ipv4_address: 172.29.77.10
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "provider_admin", "-d", "reporting"]
+      interval: 5s
+      retries: 20
+
+  accesslease:
+    depends_on:
+      provider-db:
+        condition: service_healthy
+    environment:
+      ACCESSLEASE_PROVIDER: postgres-role
+      ACCESSLEASE_PROVIDER_ADMIN_URL: postgres://provider_admin:${PROVIDER_DB_PASSWORD:?set PROVIDER_DB_PASSWORD in .env}@provider-db:5432/reporting
+      # The provider cluster resolves to a private address; allow exactly its subnet and name, nothing else.
+      ACCESSLEASE_EGRESS_ALLOWLIST: provider-db:5432,172.29.77.0/24
+      # Host shown to grantees in credential deliveries. From your computer the cluster is not published; see docs/runbook/smoke.md.
+      ACCESSLEASE_PROVIDER_PUBLIC_HOST: provider-db
+    # Stay on the default network (metadata database) and join the provider network.
+    networks:
+      - default
+      - accesslease
+
+networks:
+  accesslease:
+    ipam:
+      config:
+        - subnet: 172.29.77.0/24
