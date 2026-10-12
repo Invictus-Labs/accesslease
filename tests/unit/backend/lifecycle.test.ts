@@ -87,6 +87,18 @@ describe("issuance and credential delivery", () => {
     expect((await rejects(retrieveCredential(env.ctx, env.operator, approved.id))).code).toBe("credential_unavailable");
     await drive(env);
   });
+
+  it("a lease past expires_at but not yet swept never delivers its credential", async () => {
+    const approved = await requestApprove(env, { task_ref: "cred-expired-unswept" }, 120);
+    await drive(env);
+    expect((await getLease(env.ctx, env.viewer, approved.id)).state).toBe("active");
+    env.clock.advance(121);
+    const refused = await rejects(retrieveCredential(env.ctx, env.operator, approved.id));
+    expect(refused.code).toBe("credential_unavailable");
+    expect((await env.ctx.db.query("SELECT credential_ct IS NOT NULL AS held FROM lease_secrets WHERE lease_id = $1", [approved.id])).rows[0]).toEqual({ held: true });
+    await drive(env);
+    expect((await getLease(env.ctx, env.viewer, approved.id)).state).toBe("revoked_verified");
+  });
 });
 
 describe("AC-03 issue ambiguity enters ISSUE_UNKNOWN and reconciles without duplicates", () => {

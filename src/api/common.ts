@@ -76,7 +76,7 @@ export interface Limiters {
 
 export const createLimiters = (ctx: Ctx): Limiters => ({
   account: new RateLimiter(10, 60_000),
-  address: new RateLimiter(100, 60_000),
+  address: new RateLimiter(100, 60_000, 10_000, "evict-oldest"),
   session: new RateLimiter(ctx.settings.sessionRequestsPerMinute, 60_000),
 });
 

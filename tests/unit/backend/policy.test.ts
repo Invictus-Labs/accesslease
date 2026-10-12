@@ -124,6 +124,24 @@ describe("AC-01 scope and TTL policy", () => {
     await setPolicy(env.ctx, env.admin, { scope_allow_prefixes: [], scope_deny_prefixes: [] });
   });
 
+  it("an allow prefix without a trailing separator admits only at a name boundary, never a sibling resource", () => {
+    const evaluate = (scope: string, allow: string[], deny: string[] = []) => () =>
+      evaluateLease({
+        policy: { min_ttl_seconds: 60, max_ttl_seconds: 3600, scope_allow_prefixes: allow, scope_deny_prefixes: deny },
+        provider: env.provider,
+        resource: "sandbox",
+        scopes: [scope],
+        expiresAt: new Date(env.clock().getTime() + 600_000),
+        now: env.clock(),
+      });
+    expect(evaluate("synthetic:sandbox:read", ["synthetic:sandbox"])).not.toThrow();
+    expect(evaluate("synthetic:sandbox_secret:read", ["synthetic:sandbox"])).toThrow(expect.objectContaining({ code: "scope_forbidden" }));
+    expect(evaluate("synthetic:sandbox_secret:read", ["synthetic:sandbox:"])).toThrow(expect.objectContaining({ code: "scope_forbidden" }));
+    expect(evaluate("synthetic:sandbox:read", ["synthetic:sandbox:read"])).not.toThrow();
+    // Deny prefixes keep plain prefix semantics: over-denying a sibling is the safe direction.
+    expect(evaluate("synthetic:sandbox_secret:read", [], ["synthetic:sandbox"])).toThrow(expect.objectContaining({ code: "scope_forbidden" }));
+  });
+
   it("records policy rejections in the workspace audit trail without the rejected content", async () => {
     await rejects(requestLease(env.ctx, env.operator, goodRequest({ scopes: ["superuser"] })));
     const rows = (await env.ctx.db.query<{ redacted_metadata: Record<string, unknown> }>("SELECT redacted_metadata FROM audit_events WHERE action = 'policy.rejected' ORDER BY seq DESC LIMIT 1")).rows;

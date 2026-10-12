@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { LoginRequestSchema } from "../domain/schemas.js";
 import { ROLES } from "../domain/types.js";
 import { tooManyRequests, unprocessable } from "../errors.js";
-import { addMember, csrfFor, listMembers, login, logout, SESSION_COOKIE } from "../services/auth.js";
+import { addMember, addressBucket, csrfFor, listMembers, login, logout, SESSION_COOKIE } from "../services/auth.js";
 import { type ApiDeps, bodyOf, header, type Limiters, parseCookies, who } from "./common.js";
 
 const publicPrincipal = (p: ReturnType<typeof who>) => ({ id: p.userId, email: p.email, workspace_id: p.workspaceId, workspace_name: p.workspaceName, role: p.role });
@@ -16,7 +16,7 @@ export function registerPublicAuth(api: FastifyInstance, { ctx, report }: ApiDep
     // Keyed identifiers keep raw emails and addresses out of the in-memory buckets. The address limiter is checked first and
     // short-circuits: a throttled address must not keep minting account buckets (which would fill the bounded account limiter
     // and lock every other user out).
-    const addressRetry = limiters.address.take(ctx.key.mac("login-ip", req.ip), now) ?? 0;
+    const addressRetry = limiters.address.take(ctx.key.mac("login-ip", addressBucket(req.ip)), now) ?? 0;
     if (addressRetry > 0) throw tooManyRequests(addressRetry);
     const accountRetry = limiters.account.take(ctx.key.mac("login-account", input.email.trim().toLowerCase()), now) ?? 0;
     if (accountRetry > 0) throw tooManyRequests(accountRetry);

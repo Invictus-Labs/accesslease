@@ -367,6 +367,8 @@ export async function retrieveCredential(ctx: Ctx, principal: Principal, leaseId
     if (!lease) throw notFound();
     const now = ctx.clock();
     if (lease.state !== "ACTIVE") throw conflict("credential_unavailable", `A credential can only be retrieved while the lease is ACTIVE (state ${lease.state})`);
+    // A lease past expires_at is still ACTIVE until the sweeper runs; never hand out a credential in that window.
+    if (lease.expires_at.getTime() <= now.getTime()) throw conflict("credential_unavailable", "The lease has expired; its credential can no longer be retrieved");
     const secret = (await tx.query<{ credential_ct: string | null; credential_retrieved_at: Date | null }>("SELECT credential_ct, credential_retrieved_at FROM lease_secrets WHERE lease_id = $1 FOR UPDATE", [id])).rows[0];
     if (!secret) throw conflict("credential_unavailable", "No credential exists for this lease");
     if (!secret.credential_ct) throw conflict(secret.credential_retrieved_at ? "credential_already_retrieved" : "credential_unavailable", "The credential was already retrieved or has been purged");

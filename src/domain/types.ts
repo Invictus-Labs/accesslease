@@ -355,6 +355,7 @@ export const ERROR_CODES = {
   credential_already_retrieved: 409,
   credential_unavailable: 409,
   already_member: 409,
+  account_exists: 409,
   payload_too_large: 413,
   bundle_too_large: 413,
   invalid_body: 422,

@@ -105,6 +105,7 @@ The backend contract documents and tests the derived maximum for the shipped pro
 
 - **The revoke or close reason text is not visible.** The free-text reason typed in the UI (or sent as `reason`) is stored with the lease, but the API, the audit trail, evidence bundles and reports do not show it. They show the structured reason only: `operator_revoked`, `task_closed`, `expired` and the refusal reasons. Record your own reasoning in your ticketing system.
 - **`bootstrap-admin` for an existing email is refused** (`User is already a member of this workspace`, exit code 2). Nothing changes and no password is printed.
+- **`POST /members` never reuses an existing account.** Accounts are installation-wide. Adding an email that already has an account (in any workspace) is refused with `409 account_exists` and nothing changes, so an admin can never set the password of someone else's account. To give an existing account admin access to another workspace, the local operator runs `bootstrap-admin` for that workspace: it links the account and keeps its own password.
 - **The demo bundle hash is stable per build and per fixed inputs, not across builds.**
 
 ## 7. Collecting information for a bug report

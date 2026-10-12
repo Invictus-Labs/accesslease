@@ -40,11 +40,11 @@ real local PostgreSQL provider. A SYNTHETIC lease is never live evidence.
 | --- | --- | --- |
 | `GET /health/live` | none | `{status:"ok"}` |
 | `GET /health/ready` | none | `{status:"ready"}` or `503 not_ready` when the database is down or any migration is missing/failed/modified |
-| `POST /auth/login` | none | `{email,password,workspace_id?}` -> `{user,csrf_token}`; rate limited (429) |
+| `POST /auth/login` | none | `{email,password,workspace_id?}` -> `{user,csrf_token}`; rate limited (429) per account and per client address (IPv6 by /64) |
 | `GET /auth/session` | any | `{user,csrf_token}` |
 | `POST /auth/logout` | any | `{ok:true}` |
 | `GET /members` | admin | list members |
-| `POST /members` | admin | `{email,password,role}` -> 201 (password >= 12 chars) |
+| `POST /members` | admin | `{email,password,role}` -> 201 (password >= 12 chars). Creates a new account only: `409 already_member` when the email is already in this workspace, `409 account_exists` when an account with that email exists on the installation (it is never adopted with an admin-chosen password; nothing changes) |
 | `GET /policy` | viewer | policy incl. `policy_hash` |
 | `PUT /policy` | admin | partial `PolicyUpdate` (+`expected_version`); only admins change TTL/scope policy |
 | `GET /provider` | operator | provider label, capabilities, `connected` (explicit `false` + `code` when disconnected) |
@@ -77,8 +77,8 @@ Policy (AC-01), evaluated against the workspace policy at request time and again
   Over max: `422 ttl_exceeds_max`; below min: `422 ttl_below_min`; in the past: `422 expires_in_past`.
 - Scopes are exact grants; wildcard and admin-class scopes are refused before any provider is contacted:
   `422 scope_wildcard` (`*`, `%`, `?`, `all`, `any`, `full`, ...), `422 scope_forbidden` (admin, root, superuser, owner, ddl,
-  createrole/createdb, grant, replication, bypassrls, drop, truncate, delete ...; deny-prefixes from policy; not on the allow
-  list), `422 invalid_scope` (does not match the provider grammar). `postgres-role` grammar:
+  createrole/createdb, grant, replication, bypassrls, drop, truncate, delete ...; deny-prefixes from policy (plain prefix); not on the allow
+  list, where an allow prefix matches only at a `:` or `.` boundary, so `pg:app.orders` admits `pg:app.orders:select` but not `pg:app.orders_secret:select`), `422 invalid_scope` (does not match the provider grammar). `postgres-role` grammar:
   `pg:<schema>.<table>:<select|insert|update>` (no `ALL`, no `*`). A resource that fails the provider's check is `422 invalid_scope`.
 - Free-text refs (`task_ref`, `subject_ref`, `resource_ref`, scopes) are redacted at intake: token-shaped values and
   `password=...` style assignments are replaced with `[REDACTED]` before storage, so they can never reach logs, audit, exports or
@@ -121,7 +121,7 @@ and `null` at the end. Workspace-scoped.
 
 ### `POST /leases/{id}/credential` -> `200 CredentialDelivery`
 One-time retrieval. Authenticated, CSRF-protected, role operator+, workspace-scoped, `cache-control: no-store`. Allowed only while
-`ACTIVE`; the secret is decrypted for this response, then purged: a second call is `409 credential_already_retrieved`; in any other
+`ACTIVE` and before `expires_at` (a lease past its expiry that the worker has not swept yet is `409 credential_unavailable`); the secret is decrypted for this response, then purged: a second call is `409 credential_already_retrieved`; in any other
 state `409 credential_unavailable`. The secret is never in a URL, query string, log, audit row, event, export, report, list or detail
 response.
 

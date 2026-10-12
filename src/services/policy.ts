@@ -188,6 +188,13 @@ export interface Evaluation {
   remaining?: boolean;
 }
 
+/**
+ * An allow prefix admits a scope only at a name boundary: `pg:app.orders` admits `pg:app.orders:select` but not the sibling
+ * `pg:app.orders_secret:select`. Deny prefixes stay plain prefixes (over-denying is the safe direction).
+ */
+const allowPrefixMatches = (scope: string, prefix: string): boolean =>
+  scope.startsWith(prefix) && (scope.length === prefix.length || /[:.]$/.test(prefix) || /[:.]/.test(scope.charAt(prefix.length)));
+
 /** Policy decision (AC-01). Throws an AppError (422) before any provider is contacted for writes. */
 export function evaluateLease(input: Evaluation): void {
   const resource = input.provider.validateResource(input.resource);
@@ -198,7 +205,7 @@ export function evaluateLease(input: Evaluation): void {
     const specific = input.provider.validateScope(scope);
     if (!specific.ok) throw unprocessable(specific.code, specific.message);
     if (input.policy.scope_deny_prefixes.some((prefix) => scope.startsWith(prefix))) throw unprocessable("scope_forbidden", "scope is denied by workspace policy");
-    if (input.policy.scope_allow_prefixes.length > 0 && !input.policy.scope_allow_prefixes.some((prefix) => scope.startsWith(prefix))) {
+    if (input.policy.scope_allow_prefixes.length > 0 && !input.policy.scope_allow_prefixes.some((prefix) => allowPrefixMatches(scope, prefix))) {
       throw unprocessable("scope_forbidden", "scope is not on the workspace allow list");
     }
   }

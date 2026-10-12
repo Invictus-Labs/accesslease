@@ -1,3 +1,4 @@
+import { isIPv4, isIPv6 } from "node:net";
 import { newId } from "../lib/ids.js";
 import type { Ctx } from "../context.js";
 import { addSeconds } from "../context.js";
@@ -29,16 +30,30 @@ export async function createWorkspace(tx: Queryable, ctx: Pick<Ctx, "settings">,
 }
 
 /**
- * Create (or reuse) a user and grant a workspace role. Only the CLI bootstrap, the admin-only members route
- * and the synthetic demo seeder call this: no open registration, no default password.
+ * Create a user and grant a workspace role. Only the CLI bootstrap, the admin-only members route and the synthetic demo
+ * seeder call this: no open registration, no default password.
+ *
+ * Accounts are installation-wide, so an email that already has an account is never silently adopted with a password the
+ * caller chose: that would let an admin of one workspace pre-create an account for someone else's email and then sign in
+ * to every workspace that later adds the same email. `existingUser: "refuse"` (the default, used by the members route)
+ * rejects such an email with `409 account_exists` and changes nothing. Only the trusted local operator CLI passes
+ * `"adopt"`, and it reports that the account already existed and that no password was set.
  */
-export async function grantUser(tx: Queryable, input: { workspaceId: string; email: string; password: string; role: Role; at: Date }): Promise<string> {
+export async function grantUser(
+  tx: Queryable,
+  input: { workspaceId: string; email: string; password: string; role: Role; at: Date; existingUser?: "refuse" | "adopt" },
+): Promise<string> {
   const email = input.email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+$/.test(email) || email.length > 320) throw unprocessable("validation_failed", "A valid email is required");
   if (input.password.length < 12) throw unprocessable("validation_failed", "Passwords need at least 12 characters");
   if (!["admin", "operator", "viewer"].includes(input.role)) throw unprocessable("validation_failed", "Role must be admin, operator or viewer");
   const existing = await tx.query<{ id: string }>("SELECT id FROM users WHERE email = $1", [email]);
   let userId = existing.rows[0]?.id;
+  if (userId && (input.existingUser ?? "refuse") === "refuse") {
+    const member = await tx.query("SELECT 1 FROM memberships WHERE workspace_id = $1 AND user_id = $2", [input.workspaceId, userId]);
+    if (member.rows.length > 0) throw conflict("already_member", "User is already a member of this workspace");
+    throw conflict("account_exists", "An account with this email already exists; it cannot be added with a new password");
+  }
   if (!userId) {
     userId = newId();
     await tx.query("INSERT INTO users (id, email, password_hash, created_at) VALUES ($1,$2,$3,$4)", [userId, email, await hashPassword(input.password), input.at]);
@@ -163,7 +178,7 @@ export async function bootstrapAdmin(ctx: Ctx, input: BootstrapInput): Promise<B
     const existing = await tx.query<{ id: string }>("SELECT id FROM workspaces WHERE name = $1 ORDER BY created_at LIMIT 1", [name]);
     const workspaceId = existing.rows[0]?.id ?? (await createWorkspace(tx, ctx, name, at));
     const userExisted = (await tx.query("SELECT 1 FROM users WHERE email = $1", [input.email.trim().toLowerCase()])).rows.length > 0;
-    const userId = await grantUser(tx, { workspaceId, email: input.email, password: input.password, role: "admin", at });
+    const userId = await grantUser(tx, { workspaceId, email: input.email, password: input.password, role: "admin", at, existingUser: "adopt" });
     await audit(tx, { workspaceId, leaseId: null, actorRef: "cli:local", action: "admin.bootstrapped", at });
     return { workspaceId, userId, created: { workspace: !existing.rows[0], user: !userExisted } };
   });
@@ -194,7 +209,12 @@ export const workerPrincipal = (workspaceId: string, workspaceName = ""): Princi
   sessionId: null,
 });
 
-/** Fixed-window limiter for anonymous entry points (login). In-memory per process, bounded. */
+/**
+ * Fixed-window limiter for anonymous entry points (login). In-memory per process, bounded.
+ * At capacity a new key either fails closed (`"deny"`, the per-account limiter: never reset a targeted account's budget)
+ * or evicts the oldest bucket (`"evict-oldest"`, the per-address limiter: an attacker rotating source addresses must not
+ * be able to lock every legitimate client out).
+ */
 export class RateLimiter {
   private readonly hits = new Map<string, { count: number; resetAt: number }>();
 
@@ -202,18 +222,38 @@ export class RateLimiter {
     private readonly limit: number,
     private readonly windowMs: number,
     private readonly maxBuckets = 10_000,
+    private readonly whenFull: "deny" | "evict-oldest" = "deny",
   ) {}
 
   take(key: string, nowMs: number): number | null {
     for (const [bucket, value] of this.hits) if (value.resetAt <= nowMs) this.hits.delete(bucket);
     const entry = this.hits.get(key);
     if (!entry) {
-      // At capacity fail closed rather than evicting an active bucket.
-      if (this.hits.size >= this.maxBuckets) return Math.ceil(this.windowMs / 1000);
+      if (this.hits.size >= this.maxBuckets) {
+        if (this.whenFull === "deny") return Math.ceil(this.windowMs / 1000);
+        const oldest = this.hits.keys().next().value;
+        if (oldest !== undefined) this.hits.delete(oldest);
+      }
       this.hits.set(key, { count: 1, resetAt: nowMs + this.windowMs });
       return null;
     }
     entry.count += 1;
     return entry.count > this.limit ? Math.ceil((entry.resetAt - nowMs) / 1000) : null;
   }
+}
+
+/**
+ * Rate-limit bucket for a client address. IPv6 clients are bucketed by their /64 (one subscriber typically holds a whole
+ * /64, so per-address buckets would be free to rotate); IPv4 and IPv4-mapped addresses are kept whole.
+ */
+export function addressBucket(ip: string): string {
+  const address = (ip.split("%")[0] ?? "").toLowerCase();
+  if (!isIPv6(address)) return address;
+  if (address.startsWith("::ffff:") && isIPv4(address.slice(7))) return address.slice(7);
+  const [head = "", tail] = address.split("::");
+  const width = (parts: string[]) => parts.reduce((n, g) => n + (g.includes(".") ? 2 : 1), 0);
+  const front = head ? head.split(":") : [];
+  const back = tail ? tail.split(":") : [];
+  const groups = tail === undefined ? front : [...front, ...Array<string>(8 - width(front) - width(back)).fill("0"), ...back];
+  return `${groups.slice(0, 4).map((g) => Number.parseInt(g, 16).toString(16)).join(":")}::/64`;
 }

@@ -9,6 +9,7 @@ import { ProviderRegistry } from "../../../src/connectors/provider.js";
 import { SyntheticProvider } from "../../../src/connectors/synthetic.js";
 import { fixedClock } from "../../../src/context.js";
 import { canonicalJson, contentHash } from "../../../src/domain/canonical.js";
+import { verifyPassword } from "../../../src/crypto.js";
 import { AppError } from "../../../src/errors.js";
 import { migrate } from "../../../src/db/migrate.js";
 import { bootstrapAdmin, cliPrincipal } from "../../../src/services/auth.js";
@@ -464,6 +465,13 @@ describe("report data, doctor and the offline demo", () => {
       expect(await cliPrincipal(ctx, "Ops")).toMatchObject({ workspaceId: made.workspaceId });
       expect(await cliPrincipal(ctx, made.workspaceId)).toMatchObject({ workspaceId: made.workspaceId });
       await bootstrapAdmin(ctx, { email: "third@example.test", password: "yet-another-long-password", workspaceName: "Second" });
+      // The trusted local CLI may link an existing account to another workspace, but never sets the password it was given.
+      const linked = await bootstrapAdmin(ctx, { email: "second@example.test", password: "cli-supplied-other-password", workspaceName: "Second" });
+      expect(linked.created).toEqual({ workspace: false, user: false });
+      expect(linked.userId).toBe(second.userId);
+      const hash = (await fresh.db.query<{ password_hash: string }>("SELECT password_hash FROM users WHERE id = $1", [second.userId])).rows[0]?.password_hash as string;
+      expect(await verifyPassword("another-long-password", hash)).toBe(true);
+      expect(await verifyPassword("cli-supplied-other-password", hash)).toBe(false);
       await expect(cliPrincipal(ctx)).rejects.toMatchObject({ code: "validation_failed" });
       await expect(cliPrincipal(ctx, "missing")).rejects.toMatchObject({ status: 404 });
     } finally {

@@ -9,7 +9,7 @@ import { PostgresRoleProvider } from "../../../src/connectors/postgres-role.js";
 import { ProviderRegistry } from "../../../src/connectors/provider.js";
 import { CredentialDeliverySchema, ErrorSchema, EventPageSchema, LeaseDetailSchema, LeasePageSchema, LeaseViewSchema } from "../../../src/domain/schemas.js";
 import { buildApp, startServer } from "../../../src/server.js";
-import { RateLimiter } from "../../../src/services/auth.js";
+import { addressBucket, RateLimiter } from "../../../src/services/auth.js";
 import { runWorkerOnce } from "../../../src/workers/index.js";
 import { credentialSecretFor } from "../../../src/workers/issue.js";
 import { drive, type Env, goodRequest, iso, makeEnv } from "./helpers.js";
@@ -238,6 +238,45 @@ describe("authentication", () => {
     }
   });
 
+  it("the address limiter evicts the oldest bucket at capacity (no global lockout); the account limiter still fails closed", () => {
+    const now = env.clock().getTime();
+    const account = new RateLimiter(10, 60_000, 2);
+    expect(account.take("a", now)).toBeNull();
+    expect(account.take("b", now)).toBeNull();
+    expect(account.take("c", now)).toBe(60);
+    const address = new RateLimiter(1, 60_000, 2, "evict-oldest");
+    expect(address.take("a", now)).toBeNull();
+    expect(address.take("b", now)).toBeNull();
+    expect(address.take("b", now)).toBe(60);
+    expect(address.take("c", now)).toBeNull();
+    expect(address.take("b", now)).toBe(60);
+    expect(address.take("a", now)).toBeNull();
+  });
+
+  it("buckets IPv6 login addresses by /64 so rotating within one subscriber prefix does not reset the address limit", async () => {
+    expect(addressBucket("2001:db8:1:2::1")).toBe("2001:db8:1:2::/64");
+    expect(addressBucket("2001:DB8:1:2:ffff:ffff:ffff:9")).toBe("2001:db8:1:2::/64");
+    expect(addressBucket("2001:db8::1")).toBe("2001:db8:0:0::/64");
+    expect(addressBucket("::1")).toBe("0:0:0:0::/64");
+    expect(addressBucket("fe80::1%en0")).toBe("fe80:0:0:0::/64");
+    expect(addressBucket("64:ff9b::192.0.2.1")).toBe("64:ff9b:0:0::/64");
+    expect(addressBucket("::ffff:192.0.2.7")).toBe("192.0.2.7");
+    expect(addressBucket("192.0.2.7")).toBe("192.0.2.7");
+    const limiters: Limiters = { address: new RateLimiter(1, 60_000, 10, "evict-oldest"), account: new RateLimiter(100, 60_000), session: new RateLimiter(1000, 60_000) };
+    const solo = Fastify();
+    registerPublicAuth(solo, { ctx: env.ctx, report: () => undefined }, limiters);
+    await solo.ready();
+    try {
+      const attempt = (remoteAddress: string, i: number) =>
+        solo.inject({ method: "POST", url: "/auth/login", remoteAddress, payload: { email: `v6-${i}@example.test`, password: "wrong-password-xx" } });
+      expect((await attempt("2001:db8:1:2::1", 1)).statusCode).toBe(401);
+      expect((await attempt("2001:db8:1:2::abcd", 2)).statusCode).toBe(429);
+      expect((await attempt("2001:db8:1:3::1", 3)).statusCode).toBe(401);
+    } finally {
+      await solo.close();
+    }
+  });
+
   it("sessions are revocable (logout), expire, and die with the membership", async () => {
     const s = await login(app, "viewer-main@example.test");
     expect((await call(app, s, "GET", "/auth/session")).json().csrf_token).toBe(s.csrf);
@@ -270,6 +309,27 @@ describe("authentication", () => {
     expect(members.map((m: { email: string }) => m.email)).toContain("new.person@example.test");
     expect((await call(app, operator, "GET", "/members")).statusCode).toBe(403);
     expect((await call(app, operator, "POST", "/members", { email: "x@example.test", password: "long-enough-password", role: "viewer" })).statusCode).toBe(403);
+  });
+
+  it("an admin of another workspace cannot pre-create an account and have it adopted here with their own password", async () => {
+    const otherAdmin = await login(app, "admin-other@example.test");
+    const attackerPassword = "attacker-chosen-password";
+    const planted = await call(app, otherAdmin, "POST", "/members", { email: "Victim@example.test", password: attackerPassword, role: "viewer" });
+    expect(planted.statusCode).toBe(201);
+    const membershipsBefore = (await env.ctx.db.query("SELECT workspace_id FROM memberships WHERE user_id = $1", [planted.json().user_id])).rows;
+    // The victim workspace's admin adds the same email with a password of their own choosing: refused, nothing changes.
+    const res = await call(app, admin, "POST", "/members", { email: "victim@example.test", password: "victim-workspace-password", role: "operator" });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error.code).toBe("account_exists");
+    expect(res.body).not.toContain(attackerPassword);
+    expect((await env.ctx.db.query("SELECT workspace_id FROM memberships WHERE user_id = $1", [planted.json().user_id])).rows).toEqual(membershipsBefore);
+    // The attacker's credential does not open the victim workspace, and the admin's chosen password was never set.
+    const attackerLogin = await app.inject({ method: "POST", url: "/api/v1/auth/login", payload: { email: "victim@example.test", password: attackerPassword, workspace_id: env.workspaceId } });
+    expect(attackerLogin.statusCode).toBe(401);
+    const adminChosen = await app.inject({ method: "POST", url: "/api/v1/auth/login", payload: { email: "victim@example.test", password: "victim-workspace-password" } });
+    expect(adminChosen.statusCode).toBe(401);
+    // Re-adding an existing member of this workspace is still the specific already_member conflict.
+    expect((await call(app, admin, "POST", "/members", { email: "operator-main@example.test", password: "long-enough-password", role: "viewer" })).json().error.code).toBe("already_member");
   });
 });
 
