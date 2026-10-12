@@ -1,12 +1,15 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { registerPublicAuth } from "../../../src/api/auth.js";
+import type { Limiters } from "../../../src/api/common.js";
 import { PostgresRoleProvider } from "../../../src/connectors/postgres-role.js";
 import { ProviderRegistry } from "../../../src/connectors/provider.js";
 import { CredentialDeliverySchema, ErrorSchema, EventPageSchema, LeaseDetailSchema, LeasePageSchema, LeaseViewSchema } from "../../../src/domain/schemas.js";
 import { buildApp, startServer } from "../../../src/server.js";
+import { RateLimiter } from "../../../src/services/auth.js";
 import { runWorkerOnce } from "../../../src/workers/index.js";
 import { credentialSecretFor } from "../../../src/workers/issue.js";
 import { drive, type Env, goodRequest, iso, makeEnv } from "./helpers.js";
@@ -213,6 +216,26 @@ describe("authentication", () => {
       }
     }
     expect(last).toBe(429);
+  });
+
+  it("a throttled address does not mint account-limiter buckets (no global login lockout)", async () => {
+    const limiters: Limiters = { address: new RateLimiter(1, 60_000), account: new RateLimiter(10, 60_000, 3), session: new RateLimiter(1000, 60_000) };
+    const solo = Fastify();
+    registerPublicAuth(solo, { ctx: env.ctx, report: () => undefined }, limiters);
+    await solo.ready();
+    try {
+      const first = await solo.inject({ method: "POST", url: "/auth/login", payload: { email: "spray-0@example.test", password: "wrong-password-xx" } });
+      expect(first.statusCode).not.toBe(200);
+      for (let i = 1; i <= 5; i += 1) {
+        const res = await solo.inject({ method: "POST", url: "/auth/login", payload: { email: `spray-${i}@example.test`, password: "wrong-password-xx" } });
+        expect(res.statusCode).not.toBe(200);
+      }
+      // Only the first (unthrottled) request may have taken an account bucket, so the bounded account limiter still has room.
+      expect(limiters.account.take("someone-else", env.clock().getTime())).toBeNull();
+      expect(limiters.account.take("someone-else-2", env.clock().getTime())).toBeNull();
+    } finally {
+      await solo.close();
+    }
   });
 
   it("sessions are revocable (logout), expire, and die with the membership", async () => {

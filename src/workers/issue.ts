@@ -138,7 +138,7 @@ export async function processIssue(ctx: Ctx, job: Job): Promise<IssueOutcome> {
       const r = outcome.result;
       await tx.query(
         `UPDATE provider_grants SET status = 'issued', issued_at = COALESCE(issued_at, $2), valid_until = $3, provider_ref = $4,
-                conn_host = $5, conn_port = $6, conn_database = $7, conn_username = $8 WHERE lease_id = $1`,
+                conn_host = $5, conn_port = $6, conn_database = $7, conn_username = $8 WHERE lease_id = $1 AND status <> 'revoked'`,
         [lease.id, now, r.validUntil, r.providerRef, r.connection.host, r.connection.port, r.connection.database, r.connection.username],
       );
       if (lease2.state === "ISSUING" || lease2.state === "ISSUE_UNKNOWN") {

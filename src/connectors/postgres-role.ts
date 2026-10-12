@@ -275,6 +275,13 @@ export class PostgresRoleProvider implements Provider {
       await client.query(`GRANT CONNECT ON DATABASE ${q(db)} TO ${q(role)}`);
       for (const schema of new Set(grants.map((g) => g.schema))) await client.query(`GRANT USAGE ON SCHEMA ${q(schema)} TO ${q(role)}`);
       for (const g of grants) {
+        // Only ordinary (or partitioned) tables: a view runs with its owner's privileges and could expose data the scope does not name.
+        const kind = await client.query<{ relkind: string }>(
+          "SELECT c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND c.relname = $2",
+          [g.schema, g.table],
+        );
+        const relkind = kind.rows[0]?.relkind;
+        if (relkind !== undefined && relkind !== "r" && relkind !== "p") throw new ProviderRejectedError("scope_not_table", "scopes may only name ordinary tables");
         await client.query(`GRANT ${g.privilege.toUpperCase()} ON TABLE ${q(g.schema)}.${q(g.table)} TO ${q(role)}`);
         if (g.privilege !== "insert") continue;
         // An INSERT that uses a serial/identity default needs USAGE (and nothing more) on the sequences the table owns.

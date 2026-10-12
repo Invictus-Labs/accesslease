@@ -258,6 +258,9 @@ describe("postgres-role provider (REAL PostgreSQL 17, disposable cluster)", () =
     const id = randomUUID();
     await expect(provider.issue(issueRequest(id, { resource: "al_missing_db" }))).rejects.toMatchObject({ definite: true, code: "database_missing" });
     await expect(provider.issue(issueRequest(id, { scopes: ["pg:app.nope:select"] }))).rejects.toMatchObject({ definite: true, code: "sql_42P01" });
+    // a view runs with its owner's privileges: it is never a grantable scope
+    await admin.query("CREATE OR REPLACE VIEW app.secrets_view AS SELECT id, v FROM app.secrets");
+    await expect(provider.issue(issueRequest(id, { scopes: ["pg:app.secrets_view:select"] }))).rejects.toMatchObject({ definite: true, code: "scope_not_table" });
     expect(await roleExists(provider.providerRefFor(id))).toBe(false);
     await expect(provider.issue(issueRequest(id, { scopes: ["pg:app.*:select"] }))).rejects.toMatchObject({ code: "scope_wildcard" });
     await expect(provider.issue(issueRequest(id, { scopes: ["pg:app.orders:all"] }))).rejects.toBeInstanceOf(ProviderRejectedError);

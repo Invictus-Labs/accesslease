@@ -13,12 +13,13 @@ export function registerPublicAuth(api: FastifyInstance, { ctx, report }: ApiDep
     if (!parsed.success) throw unprocessable("validation_failed", "email and password are required");
     const input = parsed.data;
     const now = ctx.clock().getTime();
-    // Keyed identifiers keep raw emails and addresses out of the in-memory buckets.
-    const retry = Math.max(
-      limiters.address.take(ctx.key.mac("login-ip", req.ip), now) ?? 0,
-      limiters.account.take(ctx.key.mac("login-account", input.email.trim().toLowerCase()), now) ?? 0,
-    );
-    if (retry > 0) throw tooManyRequests(retry);
+    // Keyed identifiers keep raw emails and addresses out of the in-memory buckets. The address limiter is checked first and
+    // short-circuits: a throttled address must not keep minting account buckets (which would fill the bounded account limiter
+    // and lock every other user out).
+    const addressRetry = limiters.address.take(ctx.key.mac("login-ip", req.ip), now) ?? 0;
+    if (addressRetry > 0) throw tooManyRequests(addressRetry);
+    const accountRetry = limiters.account.take(ctx.key.mac("login-account", input.email.trim().toLowerCase()), now) ?? 0;
+    if (accountRetry > 0) throw tooManyRequests(accountRetry);
     const result = await login(ctx, input.email, input.password, input.workspace_id);
     const cookie = [`${SESSION_COOKIE}=${result.token}`, "Path=/", "HttpOnly", "SameSite=Strict", `Max-Age=${ctx.settings.sessionTtlSeconds}`, ctx.settings.secureCookies ? "Secure" : ""].filter(Boolean);
     reply.header("set-cookie", cookie.join("; "));

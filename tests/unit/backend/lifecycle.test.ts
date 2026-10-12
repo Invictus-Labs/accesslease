@@ -5,7 +5,7 @@ import { claimJob, fence, LeaseLostError, markDone } from "../../../src/services
 import { approveLease, closeLease, getLease, listLeases, requestLease, retrieveCredential, revokeLease } from "../../../src/services/leases.js";
 import { pullEvents } from "../../../src/services/events.js";
 import { runWorkerOnce, sweepOverdue } from "../../../src/workers/index.js";
-import { credentialSecretFor } from "../../../src/workers/issue.js";
+import { credentialSecretFor, processIssue } from "../../../src/workers/issue.js";
 import { drive, type Env, goodRequest, iso, leaseRow, makeEnv, requestApprove } from "./helpers.js";
 
 let env: Env;
@@ -437,6 +437,31 @@ describe("AC-13 job leases, fencing and restart recovery", () => {
     await drive(env);
     const detail = await getLease(env.ctx, env.viewer, approved.id);
     expect(detail.state).toBe("revoked_verified");
+    expect(env.provider.hasGrant(approved.id)).toBe(false);
+  });
+
+  it("an issue that completes after the lease was closed and its grant revoked never flips the grant back to issued", async () => {
+    const approved = await requestApprove(env, { task_ref: "late-issue" });
+    const job = await claimJob(env.ctx.db, "worker-a", env.clock, 120);
+    expect(job?.type).toBe("issue");
+    const original = env.provider.issue.bind(env.provider);
+    env.provider.issue = async (request) => {
+      const result = await original(request);
+      // While the provider call is in flight the lease is closed and a revoke records the grant as revoked.
+      await closeLease(env.ctx, env.operator, approved.id, { reason: "closed mid-issue" });
+      await env.ctx.db.query("UPDATE provider_grants SET status = 'revoked', revoked_at = $2 WHERE lease_id = $1", [approved.id, env.clock()]);
+      return result;
+    };
+    try {
+      expect(await processIssue(env.ctx, job!)).toBe("issued");
+    } finally {
+      env.provider.issue = original;
+    }
+    expect(await actions(approved.id)).toContain("issue.completed_after_close");
+    const grant = (await env.ctx.db.query<{ status: string }>("SELECT status FROM provider_grants WHERE lease_id = $1", [approved.id])).rows[0];
+    expect(grant?.status).toBe("revoked");
+    await drive(env);
+    expect((await getLease(env.ctx, env.viewer, approved.id)).state).toBe("revoked_verified");
     expect(env.provider.hasGrant(approved.id)).toBe(false);
   });
 
