@@ -13,3 +13,5 @@ __pycache__/
 .DS_Store
 demo-artifacts/
 *.tgz
+node_modules
+.claude/

@@ -1,0 +1,9 @@
+{
+  "fixture_version": "1",
+  "description": "Hostile-but-inert request fields. Rendered anywhere, they must appear as literal text, never as markup or script.",
+  "task_ref": "<script>window.__al_xss = 1</script>",
+  "subject_ref": "<img src=x onerror=\"window.__al_xss = 2\">@example.invalid",
+  "resource_ref": "pg:app",
+  "scopes": ["pg:app.records:select"],
+  "reason": "\"><svg onload=\"window.__al_xss = 3\"> <a href=\"javascript:window.__al_xss=4\">click</a>"
+}

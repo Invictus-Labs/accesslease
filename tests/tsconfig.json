@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "..",
+    "types": ["node"]
+  },
+  "include": [
+    "accesslease.spec.ts",
+    "helpers/**/*.ts",
+    "integration/**/*.ts",
+    "e2e/**/*.ts",
+    "negative-controls/**/*.ts"
+  ],
+  "exclude": ["../dist", "../node_modules"]
+}

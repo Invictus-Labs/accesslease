@@ -806,91 +806,150 @@ body{max-width:1220px;margin:auto;padding:36px;background:#080c12;color:#e2e8f0;
 <tr>
 <td>AC-01</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;scope and TTL policy&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: scope and TTL policy &gt; rejects wildcard and admin-class scopes with 422 before any provider call and stores nothing</code><br>
+<code>tests/accesslease.spec.ts :: scope and TTL policy &gt; accepts an exact narrow scope and the same request is accepted again only as a new lease</code><br>
+<code>tests/accesslease.spec.ts :: scope and TTL policy &gt; enforces the 8 hour hard maximum exactly at the boundary and the minimum below it</code><br>
+<code>tests/accesslease.spec.ts :: scope and TTL policy &gt; defaults to a one hour lease when expires_at is omitted</code><br>
+<code>tests/accesslease.spec.ts :: scope and TTL policy &gt; lets only admins change TTL and scope policy; operators and viewers get 403 and nothing changes</code><br>
+<code>tests/accesslease.spec.ts :: scope and TTL policy &gt; scope allow and deny lists set by an admin are enforced</code><br>
+<code>tests/accesslease.spec.ts :: scope and TTL policy &gt; a plain unknown member or wrong type is a 422 schema rejection, not an accepted lease</code><br>
+<code>tests/e2e/lease-flows.spec.ts :: policy rejections are shown as errors and create nothing: wildcard scope and over-long duration</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-02</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;approval freshness&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: approval freshness &gt; plan_hash matches an independent canonical-JSON SHA-256 over subject, resource, sorted scopes, expiry and policy</code><br>
+<code>tests/accesslease.spec.ts :: approval freshness &gt; approves only with the exact plan_hash; a hash for any changed field is 409 plan_hash_mismatch with no state change</code><br>
+<code>tests/accesslease.spec.ts :: approval freshness &gt; an expired approval cannot issue: the worker closes the lease, no provider grant is ever created and no credential exists</code><br>
+<code>tests/accesslease.spec.ts :: approval freshness &gt; a request whose expiry is too near is 409 stale_plan at approval time and nothing is queued</code><br>
+<code>tests/accesslease.spec.ts :: approval freshness &gt; tightening the policy after the request invalidates the old plan: approval is refused</code><br>
+<code>tests/accesslease.spec.ts :: approval freshness &gt; approval requires the operator role, the lease must be REQUESTED and a replay with the same Idempotency-Key returns the stored receipt</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-03</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;native TTL and issue ambiguity&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: native TTL and issue ambiguity &gt; the real provider reports a native TTL, narrow role attributes and exactly the requested privileges</code><br>
+<code>tests/accesslease.spec.ts :: native TTL and issue ambiguity &gt; an ambiguous issue (the write happened but the call failed) enters ISSUE_UNKNOWN and reconciles to the same grant without a duplicate</code><br>
+<code>tests/accesslease.spec.ts :: native TTL and issue ambiguity &gt; a real provider outage during issuance (cluster frozen) enters ISSUE_UNKNOWN, then converges on one grant when the provider returns</code><br>
+<code>tests/accesslease.spec.ts :: native TTL and issue ambiguity &gt; a definite provider rejection (target database does not exist) never reaches ACTIVE, creates no role and ends REVOKED_VERIFIED with an explicit reason</code><br>
+<code>tests/accesslease.spec.ts :: native TTL and issue ambiguity &gt; a provider without a native TTL is refused at registration</code><br>
+<code>tests/accesslease.spec.ts :: native TTL and issue ambiguity &gt; a provider that stops enforcing a native TTL after registration is never used to issue</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-04</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;expiry and closure&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: expiry and closure &gt; expiry alone never reads as revoked; once the healthy worker runs, revocation is requested within 30 s of expiry and verified independently</code><br>
+<code>tests/accesslease.spec.ts :: expiry and closure &gt; task closure requests revocation within 30 s (immediately in the API call) and ends verified</code><br>
+<code>tests/accesslease.spec.ts :: expiry and closure &gt; a closure request on an already-closed lease changes nothing and unknown or foreign leases are rejected</code><br>
+<code>scripts/gate.mjs :: cli-demo-offline</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-05</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;revocation outage&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: revocation outage &gt; a frozen provider during explicit revocation leaves REVOCATION_UNCONFIRMED with next retry and warning, then recovers to verified without rewriting history</code><br>
+<code>tests/accesslease.spec.ts :: revocation outage &gt; a partial real revocation (the role cannot be dropped because it holds a privilege elsewhere) is REVOCATION_UNCONFIRMED even though logins are already blocked, and verifies only after the leftover is removed</code><br>
+<code>tests/accesslease.spec.ts :: revocation outage &gt; expiry during an outage is also unconfirmed, never verified by elapsed time alone</code><br>
+<code>tests/e2e/lease-flows.spec.ts :: a provider outage shows REVOCATION UNCONFIRMED as a warning with the next retry, never as green; recovery then verifies</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-06</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;restart sweep&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: restart sweep &gt; after downtime the first worker pass revokes every overdue lease before issuing a newly approved one</code><br>
+<code>tests/accesslease.spec.ts :: restart sweep &gt; a lease that expired before it was ever issued is swept and never granted access</code><br>
+<code>tests/accesslease.spec.ts :: restart sweep &gt; a redelivered issue job retries the same provider grant: same reference, one role, the lease is not disturbed</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-07</td>
 <td>Live sandbox + integration</td>
-<td><code>tests/accesslease.spec.ts :: &lt;real denial proof&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: real denial proof &gt; allows exactly the granted access during the lease and refuses everything else</code><br>
+<code>tests/accesslease.spec.ts :: real denial proof &gt; after expiry the provider natively refuses new logins while an already-open session survives until AccessLease revokes it, then everything is denied</code><br>
+<code>tests/accesslease.spec.ts :: real denial proof &gt; after explicit revocation access is denied: the open session is terminated, the role is gone and a second revoke is idempotent</code><br>
+<code>tests/accesslease.spec.ts :: real denial proof &gt; measures the residual-access window with the shipped worker defaults and keeps it within the documented maximum</code><br>
+<code>tests/e2e/lease-flows.spec.ts :: operator walks a lease from request to verified revocation; access works only while the lease is live</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-08</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;offline demo&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: offline demo &gt; the packaged CLI demo runs with the synthetic provider, no account, no telemetry and zero outbound connections other than its database</code><br>
+<code>tests/accesslease.spec.ts :: offline demo &gt; the demo also completes inside an internal Docker network with no route off the host</code><br>
+<code>tests/accesslease.spec.ts :: offline demo &gt; live connector operations fail explicitly when the provider is disconnected: provider status, approval and the doctor command all say so</code><br>
+<code>tests/accesslease.spec.ts :: offline demo &gt; contains no telemetry: no analytics or error-reporting dependency, host or beacon exists in the dependency list or the sources</code><br>
+<code>scripts/gate.mjs :: offline-outbound-denied-demo</code><br>
+<code>scripts/gate.mjs :: cli-demo-offline</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-09</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;redaction and hostile input&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: redaction and hostile input &gt; planted secrets in free-text request fields never reach logs, API responses, evidence exports, report data or the database</code><br>
+<code>tests/accesslease.spec.ts :: redaction and hostile input &gt; login failures, malformed requests and provider errors never echo credentials, cookies or connection strings</code><br>
+<code>tests/accesslease.spec.ts :: redaction and hostile input &gt; rejects oversize and schema-invalid input before any processing: nothing is stored and no provider is contacted</code><br>
+<code>tests/accesslease.spec.ts :: redaction and hostile input &gt; an evidence import over the 25 MB metadata limit is refused with 413 before parsing, and a schema-invalid bundle with 422 before any write</code><br>
+<code>tests/accesslease.spec.ts :: redaction and hostile input &gt; malicious HTML in every user-controlled field is returned and stored as inert text</code><br>
+<code>tests/accesslease.spec.ts :: redaction and hostile input &gt; the static HTML report built from live data shows hostile markup and planted secrets as inert, redacted text</code><br>
+<code>tests/e2e/lease-flows.spec.ts :: hostile HTML in lease fields renders as inert text in the list and detail views</code><br>
+<code>tests/e2e/static-report.spec.ts :: hostile fields and planted secrets render as inert, redacted text in a table-based report; unresolved states are flagged</code><br>
+<code>tests/e2e/static-report.spec.ts :: a corrupt report-data file produces an error exit and no report claiming success</code><br>
+<code>scripts/gate.mjs :: secret-and-hygiene-scan</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-10</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;portability and corruption&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: portability and corruption &gt; exports a versioned, self-describing bundle whose every hash re-verifies with an independent canonical-JSON oracle and which contains no secrets</code><br>
+<code>tests/accesslease.spec.ts :: portability and corruption &gt; restores into a clean installation: verify, import, re-read with matching hashes, idempotent re-import, and imported leases stay read-only evidence</code><br>
+<code>tests/accesslease.spec.ts :: portability and corruption &gt; truncated, empty and non-JSON exports are refused with no partial state</code><br>
+<code>tests/accesslease.spec.ts :: portability and corruption &gt; unsupported versions and wrong kinds are refused with no partial state</code><br>
+<code>tests/accesslease.spec.ts :: portability and corruption &gt; tampering with any content, manifest or seal is detected by hash verification with no partial state</code><br>
+<code>tests/accesslease.spec.ts :: portability and corruption &gt; re-sealed bundles with unsafe paths, broken references or too many files are refused with no partial state</code><br>
+<code>tests/accesslease.spec.ts :: portability and corruption &gt; the whole round trip needs no network: verification and import work with the database only</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-11</td>
 <td>Human + E2E</td>
-<td>Non-builder follows supplied runbook in a fresh sandbox; record all assistance, step outcomes and cleanup receipt (§9 independent drill).</td>
+<td><code>docs/qa/ac-11-human-drill.md :: independent human drill (status PENDING_HUMAN_RECEIPT; no agent may mark it PASS)</code><br>
+<code>scripts/fresh-operator-smoke.mjs :: SUPPLEMENTAL, AGENT-RUN harness of the runbook (not the human receipt)</code></td>
 <td>Human receipt + harness</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-12</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;workspace isolation&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: workspace isolation &gt; cross-workspace ids answer 404 with a body identical to a missing object, on every read and write route, and change no state</code><br>
+<code>tests/accesslease.spec.ts :: workspace isolation &gt; lists, reports, events, jobs and exports contain only the caller's workspace</code><br>
+<code>tests/accesslease.spec.ts :: workspace isolation &gt; enforces admin, operator and viewer roles on every route; anonymous callers get 401</code><br>
+<code>tests/accesslease.spec.ts :: workspace isolation &gt; requires a valid CSRF token on every mutation and revokes sessions at logout</code><br>
+<code>tests/accesslease.spec.ts :: workspace isolation &gt; a user cannot sign into a workspace they do not belong to, and repeated bad logins are rate limited</code><br>
+<code>tests/e2e/lease-flows.spec.ts :: viewers get a read-only view: no create link, no actions</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>
 <tr>
 <td>AC-13</td>
 <td>Unit + integration / E2E</td>
-<td><code>tests/accesslease.spec.ts :: &lt;restart and restore&gt;</code> — assert the criterion, including its failure boundary.</td>
+<td><code>tests/accesslease.spec.ts :: restart and restore &gt; a worker killed while the provider call is in flight leaves the job reclaimable: the next worker reconciles by lookup and issues exactly one grant</code><br>
+<code>tests/accesslease.spec.ts :: restart and restore &gt; a worker killed AFTER the provider committed the grant but before recording it does not lose that outcome: the next worker adopts the existing grant</code><br>
+<code>tests/accesslease.spec.ts :: restart and restore &gt; a failed migration stops readiness: the service is not ready until every shipped migration is applied unmodified</code><br>
+<code>tests/accesslease.spec.ts :: restart and restore &gt; a migration that fails to apply aborts startup with no partial schema and the installation reports not ready</code><br>
+<code>tests/accesslease.spec.ts :: restart and restore &gt; a restored backup preserves every reference: ids, foreign keys, hashes and decryptable secrets</code></td>
 <td>Automated; live sandbox gated</td>
 <td>PLANNED</td>
 </tr>

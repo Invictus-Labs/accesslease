@@ -1,0 +1,39 @@
+# Self-hosted AccessLease: PostgreSQL (metadata) + API / worker / web UI.
+# Values come from .env (copy .env.example). No vendor account, license server or telemetry is involved.
+# The app port is published on 127.0.0.1 only: reachable from this computer, not from the network.
+services:
+  db:
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    environment:
+      POSTGRES_USER: accesslease
+      POSTGRES_DB: accesslease
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - accesslease-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "accesslease"]
+      interval: 5s
+      retries: 20
+
+  accesslease:
+    build: .
+    image: accesslease:local
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ACCESSLEASE_DATABASE_URL: postgres://accesslease@db:5432/accesslease
+      ACCESSLEASE_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      ACCESSLEASE_SECRET_KEY: ${ACCESSLEASE_SECRET_KEY:?set ACCESSLEASE_SECRET_KEY in .env}
+      ACCESSLEASE_PUBLIC_URL: ${ACCESSLEASE_PUBLIC_URL:-http://localhost:8791}
+      ACCESSLEASE_PROVIDER: ${ACCESSLEASE_PROVIDER:-synthetic}
+      ACCESSLEASE_PROVIDER_ADMIN_URL: ${ACCESSLEASE_PROVIDER_ADMIN_URL:-}
+      ACCESSLEASE_EGRESS_ALLOWLIST: ${ACCESSLEASE_EGRESS_ALLOWLIST:-}
+      ACCESSLEASE_TTL_DEFAULT_SECONDS: ${ACCESSLEASE_TTL_DEFAULT_SECONDS:-3600}
+      ACCESSLEASE_TTL_MAX_SECONDS: ${ACCESSLEASE_TTL_MAX_SECONDS:-28800}
+      ACCESSLEASE_RETENTION_DAYS: ${ACCESSLEASE_RETENTION_DAYS:-90}
+    ports:
+      - "127.0.0.1:8791:8791"
+
+volumes:
+  accesslease-db:

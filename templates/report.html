@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>{{title}}</title>
+<style>
+:root { color-scheme: light dark; --fg:#111827; --bg:#f9fafb; --card:#ffffff; --line:#d1d5db; --muted:#4b5563; --verified:#14532d; --verified-bg:#dcfce7; --warn:#7c2d12; --warn-bg:#ffedd5; --warn-line:#c2410c; --bad:#7f1d1d; --bad-bg:#fee2e2; --live:#1e3a8a; --live-bg:#dbeafe; --progress:#374151; --progress-bg:#e5e7eb; }
+@media (prefers-color-scheme: dark) { :root { --fg:#f3f4f6; --bg:#111827; --card:#1f2937; --line:#4b5563; --muted:#9ca3af; --verified:#bbf7d0; --verified-bg:#14532d; --warn:#fed7aa; --warn-bg:#7c2d12; --warn-line:#fb923c; --bad:#fecaca; --bad-bg:#7f1d1d; --live:#bfdbfe; --live-bg:#1e3a8a; --progress:#e5e7eb; --progress-bg:#374151; } }
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+main { max-width: 72rem; margin: 0 auto; padding: 1rem; }
+h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+h2 { font-size: 1.15rem; margin: 0 0 .5rem; }
+h3 { font-size: 1.05rem; margin: 0 0 .5rem; overflow-wrap: anywhere; }
+.meta { color: var(--muted); margin: 0 0 1rem; }
+.banner { padding: .5rem .75rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+.banner.synthetic { border: 2px dashed var(--warn-line); background: var(--warn-bg); color: var(--warn); }
+section { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: .75rem 1rem; margin: 1rem 0; }
+section.warning { border: 3px solid var(--warn-line); background: var(--warn-bg); color: var(--warn); }
+section.warning a { color: inherit; font-weight: 600; }
+section.error { border: 3px solid var(--bad); background: var(--bad-bg); color: var(--bad); }
+section.lease.unresolved { border-left: 8px solid var(--warn-line); }
+.empty, .note p { color: var(--muted); font-style: italic; margin: .5rem 0; }
+.table-wrap { overflow-x: auto; max-width: 100%; }
+table { width: 100%; min-width: 30rem; border-collapse: collapse; margin: .75rem 0; }
+caption { text-align: left; font-weight: 600; padding: .25rem 0; }
+th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+th { background: var(--progress-bg); color: var(--progress); }
+.badge { display: inline-block; padding: .05rem .5rem; border-radius: 999px; border: 2px solid currentColor; font-weight: 700; font-size: .85rem; white-space: nowrap; }
+.tone-neutral { color: var(--progress); background: var(--progress-bg); }
+.tone-progress { color: var(--progress); background: var(--progress-bg); border-style: dotted; }
+.tone-live { color: var(--live); background: var(--live-bg); }
+.tone-verified { color: var(--verified); background: var(--verified-bg); }
+.tone-uncertain { color: var(--warn); background: var(--warn-bg); border-style: dashed; border-color: var(--warn-line); text-transform: uppercase; }
+.tone-invalid { color: var(--bad); background: var(--bad-bg); border-style: double; border-width: 4px; }
+dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0 0 .75rem; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; overflow-wrap: anywhere; }
+.warn-text { color: var(--warn); font-weight: 600; }
+.scopes { margin: 0; padding-left: 1.2rem; }
+.muted { color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+code { font: .85em ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+footer { color: var(--muted); font-size: .85rem; margin: 1.5rem 0; }
+@media (max-width: 40rem) { dl.facts { grid-template-columns: 1fr; } }
+@media print { body { background: #fff; } section { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>{{title}}</h1>
+<p class="meta">{{meta}}</p>
+{{provider_banner}}
+{{errors}}
+{{attention}}
+{{summary}}
+{{overview}}
+{{leases}}
+<footer>An expired time is not a revoked state. A lease is shown as revoked (verified) only when independent verification was recorded. This is a static report: it contains no scripts and loads nothing from the network.</footer>
+</main>
+</body>
+</html>
